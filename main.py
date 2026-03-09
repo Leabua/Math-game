@@ -1,7 +1,6 @@
 # libraries
 import random
 import sys
-
 import cowsay as cow
 import pyfiglet as pyfig
 
@@ -30,7 +29,6 @@ cow_chars = [
 ]
 
 
-# will need to look at the logic around starting a new game directly after.
 def main():
     stats = s.existing_stats()
     name = get_name()
