@@ -10,6 +10,7 @@ from add import add
 from level import get_level
 from minus import minus
 from multiplication import multiply
+from divison import division
 import math_stats as s
 
 faces = (":)", ":p", ":0")
@@ -56,7 +57,7 @@ def main():
 
 def play_again():
     session = input("Want to play again? (yes/no) ").strip().lower()
-    return session in ["yes", "y"]  # returns a boolean of true or false
+    return session in ["yes", "y", ""]  # returns a boolean of true or false
 
 
 def get_name():
@@ -81,7 +82,7 @@ def sign(total, level, name):
         try:
             sign = (
                 input(
-                    "What do you want to practice?\n 1. Addition (+),\n 2. Subtraction (-),\n 3. Multiplication (*) \n"
+                    "What do you want to practice?\n 1. Addition (+),\n 2. Subtraction (-),\n 3. Multiplication (*),\n 4. Division (/)\n"
                 )
                 .strip()
                 .lower()
@@ -92,17 +93,19 @@ def sign(total, level, name):
             )
             print(f"Let's go \n {cool_name}")
 
-            if sign in ["multiplication", "x", "*", "3"]:
-                return multiply(total, level)
+            if sign in ["addition", "+", "1"]:
+                return add(total, level)
             elif sign in ["subtraction", "-", "2"]:
                 return minus(total, level)
-            elif sign in ["addition", "+", "1"]:
-                return add(total, level)
+            elif sign in ["multiplication", "x", "*", "3"]:
+                return multiply(total, level)
+            elif sign in ["division", "÷", "/", "4"]:
+                return division(total, level)
             else:
-                print("Please enter +, - or x")
+                print("Please enter +, -, x or /")
 
         except ValueError:
-            print("Please pick +, - or x")
+            print("Please enter +, -, x or /")
 
     print("Too many invalid attempts.")
 
