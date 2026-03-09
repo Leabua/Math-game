@@ -28,6 +28,15 @@ def create_stats():
     }
 
 
+def save_stats(stats):
+    """Save stats to json"""
+    try:
+        with open(stats_file, "w") as file:
+            json.dump(stats, file, indent=2)
+    except IOError as e:
+        print(f"Warning: Could not save stats - {e}")
+
+
 def update_stats(stats, score, total):
     """update_stats with current game results"""
     stats["games_played"] += 1
