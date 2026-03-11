@@ -1,7 +1,7 @@
 def get_level():
     for _ in range(3):
         try:
-            level = input("Level: ")
+            level = input("Level(1-3): ")
             if level.isdigit() and 1 <= int(level) <= 3:
                 print(f"You are on level {level}.")
                 return int(level)
