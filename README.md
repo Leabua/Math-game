@@ -1,20 +1,23 @@
 # Math Game
 
-A terminal-based math game for kids built in Python.
+A robust, terminal-based math practice engine built in Python, designed with a focus on logical integrity and automated quality assurance.
 
 ## Features
 
-- Addition, subtraction, division and multiplication practice
-- 3 difficulty levels
-- 3 attempts per question
-- Persistent stats tracking (accuracy, streaks, best score)
-- Random ASCII art animals on exit
+- **Dynamic Modes:** Includes both standard "Solve" mode and algebraic "Find x" mode.
+- **Inverse Operation Logic:** Division problems are generated via multiplication factors to guarantee clean integer results and avoid floating-point/zero-division errors.
+- **Difficulty Scaling:** Three distinct levels using power-of-10 digit generation logic.
+- **Robust UI:** Global `KeyboardInterrupt` handling for clean exits and custom ASCII flair using `cowsay` and `pyfiglet`.
+- **Automated Audit:** Integrated GitHub Actions (CI/CD) using `flake8` to ensure PEP 8 compliance and code quality on every push.
+- **Persistent Stats:** Tracks accuracy and performance across sessions.
 
-## Requirements
+## Tech Stack
 
-- Python 3.x
-- cowsay
-- pyfiglet
+- **Language:** Python 3.11+
+- **Editor/Env:** Neovim / Linux
+- **Version Control:** Git (Branch-based workflow with PRs)
+- **CI/CD:** GitHub Actions
+- **Dependencies:** `cowsay`, `pyfiglet`
 
 ## Installation
 
@@ -28,8 +31,18 @@ pip install cowsay pyfiglet
 python main.py
 ```
 
-## Planned Features
+## Project Architecture
 
-- Solve for x mode
-- Matplotlib performance graphs
-- GUI version
+The project is modularized to separate core logic from game modes:
+
+- `main_modes/`: Standard arithmetic logic (Addition, Subtraction, Multiplication, Division).
+- `alt_modes/`: Algebraic "Find x" logic for enhanced mental math practice.
+- `math_stats.py`: Data persistence layer for user performance tracking.
+- `integers.py`: Centralized mathematical generation logic.
+- `.github/workflows/`: Automated linting and quality gates.
+
+## Roadmap
+
+- [ ] Matplotlib performance visualization for progress tracking.
+
+---
