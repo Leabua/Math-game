@@ -1,6 +1,6 @@
 # Math Game
 
-![Demo](assets/demo.png)
+![Demo](assets/demo1.png)
 
 A robust, terminal-based math practice engine built in Python, designed with a focus on logical integrity and automated quality assurance.
 
