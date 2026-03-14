@@ -33,7 +33,6 @@ cow_chars = [
     "milk",
     "stegosaurus",
     "turtle",
-    "vader",
 ]
 
 
@@ -49,9 +48,6 @@ def main():
         mode = get_mode()
         difficulty = get_level()
         score = sign(mode, t, difficulty, name)
-
-        if score is None:
-            sys.exit(1)
 
         stats = s.update_stats(stats, score, t)
         s.save_stats(stats)
