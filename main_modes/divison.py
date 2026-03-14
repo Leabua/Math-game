@@ -39,6 +39,9 @@ def division(mode: str, total: int, level: int):
                 pass
 
         else:
-            print(f"{z} ÷ {x} = {y}")
+            if mode == "solve_mode":
+                print(f"{z} ÷ {x} = {y}")
+            if mode == "x_mode":
+                print(f"{z} ÷ {x} = {y}. x is {x}")
 
     return score
