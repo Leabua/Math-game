@@ -48,3 +48,9 @@ The project is modularized to separate core logic from game modes:
 - [ ] Matplotlib performance visualization for progress tracking.
 
 ---
+
+## License
+
+MIT
+
+---
