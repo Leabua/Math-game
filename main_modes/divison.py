@@ -2,8 +2,12 @@ from random import randint
 
 
 # need to work on this
-def division(total: int, level: int):
+def division(mode: str, total: int, level: int):
+    if mode == "x_mode":
+        print("Solve for x.")
+
     score = 0
+
     for _ in range(total):
         # x * y = z therefore z / x = y
         if level == 1:
@@ -17,13 +21,20 @@ def division(total: int, level: int):
 
         for _ in range(3):
             try:
-                ans = int(input(f"{z} ÷ {x} = "))
-                if ans == y:
-                    score += 1
-                    break
+                if mode == "solve_mode":
+                    ans = int(input(f"{z} ÷ {x} = "))
+                    if ans == y:
+                        score += 1
+                        break
+                if mode == "x_mode":
+                    ans = int(input(f"If {z} ÷ x = {y}, x is "))
+                    if ans == x:
+                        score += 1
+                        break
                 else:
                     print("Wrong")
                     raise ValueError
+
             except ValueError:
                 pass
 

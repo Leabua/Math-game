@@ -1,17 +1,28 @@
-from integers import generate_integer
+from utilities.game_logic import generate_integer
 
 
-def minus(total: int, level: int):
+def minus(mode: str, total: int, level: int):
+    if mode == "x_mode":
+        print("Solve for x.")
+
     score = 0
     for _ in range(total):
         x, y = generate_integer(level), generate_integer(level)
 
+        z = x - y
+
         for _ in range(3):
             try:
-                ans = int(input(f"{x} - {y} = "))
-                if ans == x - y:
-                    score += 1
-                    break
+                if mode == "solve_mode":
+                    ans = int(input(f"{x} - {y} = "))
+                    if ans == x - y:
+                        score += 1
+                        break
+                if mode == "x_mode":
+                    ans = int(input(f"If x - {y} = {z}, x is "))
+                    if ans == x:
+                        score += 1
+                        break
                 else:
                     print("Wrong")
                     raise ValueError
@@ -19,6 +30,9 @@ def minus(total: int, level: int):
                 pass
 
         else:
-            print(f"Correct answer: {x} - {y} = {x - y}")
+            if mode == "solve_mode":
+                print(f"Correct answer: {x} - {y} = {z}")
+            if mode == "x_mode":
+                print(f"Correct answer: {x} - {y} = {z}. x is {x}.")
 
     return score
