@@ -104,6 +104,21 @@ def total():
     sys.exit("Too many invalid attempts :( ")
 
 
+def motivation(name):
+    cool_name = pyfig.figlet_format(
+        name, font=random.choice(pyfig.FigletFont.getFonts())
+    )
+
+    loading = "-------------------------------------"
+    width = len(loading)
+    motivation = "Let's go"
+
+    if name == "":
+        print(f"{loading}\n{motivation:^{width}}\n{loading}")
+    else:
+        print(f"{loading}\n{motivation:^{width}}\n{loading}\n{cool_name}")
+
+
 # this does a lot of the "routing".
 # Could likely be simplified with a list and two of statement for the mode variables.
 def sign(mode, total, level, name):
@@ -116,11 +131,6 @@ def sign(mode, total, level, name):
                 .strip()
                 .lower()
             )
-
-            cool_name = pyfig.figlet_format(
-                name, font=random.choice(pyfig.FigletFont.getFonts())
-            )
-            print(f"\nLet's go \n {cool_name}\n-------------------------------------")
 
             if mode == "solve_mode":
                 if sign in ["addition", "+", "1"]:
