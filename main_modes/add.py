@@ -1,4 +1,4 @@
-from integers import generate_integer
+from utilities.game_logic import generate_integer
 
 
 def add(total: int, level: int):
