@@ -39,7 +39,7 @@ cow_chars = [
 
 def main():
     print(
-        "At any point exit the game with Ctrl + C.\nGame stats will not be saved if pressed during a round.\n-------------------------------------"
+        "At any point exit the game with Ctrl + C.\nGame stats will not be saved if you exit during a round.\n-------------------------------------"
     )
     stats = s.existing_stats()
     name = get_name()
@@ -67,7 +67,7 @@ def main():
 
 def play_again():
     session = input("Want to play again? (yes/no) ").strip().lower()
-    return session in ["yes", "y", ""]  # returns a boolean of true or false
+    return session in ["yes", "y", ""]  # returns a bool of true or false
 
 
 def get_mode():
@@ -85,7 +85,7 @@ def get_mode():
             elif mode in ["2", "find x mode", "x", "x mode"]:
                 return "x_mode"
             else:
-                print("Press 1 for solve or Press 2 to find x?")
+                print("Press 1 for solve or press 2 to find x?")
                 raise ValueError
         except ValueError:
             pass
@@ -108,6 +108,8 @@ def total():
     sys.exit("Too many invalid attempts :( ")
 
 
+# this does a lot of the "routing".
+# Could likely be simplified with a list and two of statement for the mode variables.
 def sign(mode, total, level, name):
     for _ in range(3):
         try:
@@ -157,7 +159,7 @@ def sign(mode, total, level, name):
 if __name__ == "__main__":
     phrases = (
         "I guess we're done for now",
-        "Okay that was a bit sudden.",
+        "Okay that was a bit sudden. Bye, I guess.",
         "You probably need to go somewhere quicky. I understand.",
         "Game Terminated!!!",
     )
