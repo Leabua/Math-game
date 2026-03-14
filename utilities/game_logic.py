@@ -74,4 +74,4 @@ def motivation(name):
     if name == "":
         print(f"{loading}\n{motivation:^{width}}\n{loading}")
     else:
-        print(f"{loading}\n{motivation:^{width}}\n{loading}\n{cool_name}")
+        print(f"{loading}\n{motivation:^{width}}\n{loading}\n{cool_name:^{width}}")
