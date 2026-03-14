@@ -5,17 +5,11 @@ import cowsay as cow
 
 # modules
 
-# main_modes
+# modes
 from main_modes.add import add
 from main_modes.minus import minus
 from main_modes.multiplication import multiply
 from main_modes.divison import division
-
-# alt_modes
-from alt_modes.addition_v2 import add_v2
-from alt_modes.minus_v2 import minus_v2
-from alt_modes.multiplication_v2 import multiply_v2
-from alt_modes.division_v2 import division_v2
 
 # utilities
 import utilities.math_stats as s
@@ -54,6 +48,8 @@ def main():
         difficulty = get_level()
         score = sign(mode, t, difficulty, name)
 
+        if score is None:
+            sys.exit("Score of type None.")
         stats = s.update_stats(stats, score, t)
         s.save_stats(stats)
 
@@ -86,32 +82,19 @@ def sign(mode, total, level, name):
 
             motivation(name)
 
-            if mode == "solve_mode":
-                if sign in ["addition", "+", "1"]:
-                    return add(total, level)
-                elif sign in ["subtraction", "-", "2"]:
-                    return minus(total, level)
-                elif sign in ["multiplication", "x", "*", "3"]:
-                    return multiply(total, level)
-                elif sign in ["division", "÷", "/", "4"]:
-                    return division(total, level)
-                else:
-                    print("Please enter +, -, x or /")
-
-            if mode == "x_mode":
-                if sign in ["addition", "+", "1"]:
-                    return add_v2(total, level)
-                elif sign in ["subtraction", "-", "2"]:
-                    return minus_v2(total, level)
-                elif sign in ["multiplication", "x", "*", "3"]:
-                    return multiply_v2(total, level)
-                elif sign in ["division", "÷", "/", "4"]:
-                    return division_v2(total, level)
-                else:
-                    print("Please enter +, -, x or /")
+            if sign in ["addition", "+", "1"]:
+                return add(mode, total, level)
+            elif sign in ["subtraction", "-", "2"]:
+                return minus(mode, total, level)
+            elif sign in ["multiplication", "x", "*", "3"]:
+                return multiply(mode, total, level)
+            elif sign in ["division", "÷", "/", "4"]:
+                return division(mode, total, level)
+            else:
+                print("Please enter +, -, x or /")
 
         except ValueError:
-            print("Please enter +, -, x or /")
+            print("Please enter +, -, x or /.")
 
     print("Too many invalid attempts.")
 
