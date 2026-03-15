@@ -26,7 +26,7 @@ def division(mode: str, total: int, level: int):
                     if ans == y:
                         score += 1
                         break
-                if mode == "x_mode":
+                elif mode == "x_mode":
                     ans = int(input(f"If {z} ÷ x = {y}, x is "))
                     if ans == x:
                         score += 1

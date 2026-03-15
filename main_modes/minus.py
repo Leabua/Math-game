@@ -18,7 +18,7 @@ def minus(mode: str, total: int, level: int):
                     if ans == x - y:
                         score += 1
                         break
-                if mode == "x_mode":
+                elif mode == "x_mode":
                     ans = int(input(f"If x - {y} = {z}, x is "))
                     if ans == x:
                         score += 1
