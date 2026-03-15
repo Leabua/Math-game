@@ -18,7 +18,7 @@ def add(mode: str, total: int, level: int):
                         break
 
                 elif mode == "x_mode":
-                    ans = int(input(f"If x + {y} = {z}, x is "))
+                    ans = int(input(f"If [x] + {y} = {z}, x is "))
                     if ans == x:
                         score += 1
                         break
@@ -31,8 +31,8 @@ def add(mode: str, total: int, level: int):
 
         else:
             if mode == "solve_mode":
-                print(f"Correct answer: {x} + {y} = {z}. x is {x}.")
-            else:
                 print(f"Correct answer: {x} + {y} = {z}.")
+            if mode == "x_mode":
+                print(f"Correct answer: {x} + {y} = {z}. x is {x}.")
 
     return score

@@ -27,7 +27,7 @@ def division(mode: str, total: int, level: int):
                         score += 1
                         break
                 elif mode == "x_mode":
-                    ans = int(input(f"If {z} ÷ x = {y}, x is "))
+                    ans = int(input(f"If {z} ÷ [x] = {y}, x is "))
                     if ans == x:
                         score += 1
                         break
@@ -40,8 +40,8 @@ def division(mode: str, total: int, level: int):
 
         else:
             if mode == "solve_mode":
-                print(f"{z} ÷ {x} = {y}")
+                print(f"Correct answer: {z} ÷ {x} = {y}.")
             if mode == "x_mode":
-                print(f"{z} ÷ {x} = {y}. x is {x}")
+                print(f"Correct answer: {z} ÷ {x} = {y}. x is {x}.")
 
     return score

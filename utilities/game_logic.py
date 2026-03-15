@@ -64,8 +64,10 @@ def total():
     sys.exit("Too many invalid attempts :( ")
 
 
+loading = "-------------------------------------"
+
+
 def motivation(name):
-    loading = "-------------------------------------"
     width = len(loading)
     motivation = "Let's go"
 

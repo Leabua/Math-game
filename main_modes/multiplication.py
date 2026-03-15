@@ -2,7 +2,6 @@ from utilities.game_logic import generate_integer
 from random import randint
 
 
-# need to work on this
 def multiply(mode: str, total: int, level: int):
     if mode == "x_mode":
         print("Solve for x.")
@@ -11,12 +10,10 @@ def multiply(mode: str, total: int, level: int):
     for _ in range(total):
         # this your standard 6 x 6
         if level == 1:
-            x = randint(1, 6)
-            y = randint(1, 6)
+            x, y = randint(1, 6), randint(1, 6)
         # this is your standard timetable
         elif level == 2:
-            x = randint(1, 12)
-            y = randint(1, 12)
+            x, y = randint(1, 12), randint(1, 12)
         # this should produce a 2 digit number x 1 - 12
         else:
             x, y = generate_integer(2), randint(0, 12)
@@ -43,8 +40,8 @@ def multiply(mode: str, total: int, level: int):
 
         else:
             if mode == "solve_mode":
-                print(f"{x} x {y} = {x * y}")
+                print(f"Correct answer: {x} x {y} = {z}.")
             if mode == "x_mode":
-                print(f"{x} x {y} = {z}. x is {x}.")
+                print(f"Correct answer: {x} x {y} = {z}. x is {x}.")
 
     return score
