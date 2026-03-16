@@ -3,8 +3,6 @@ import random
 import sys
 import cowsay as cow
 
-# modules
-
 # modes
 from main_modes.add import add
 from main_modes.minus import minus
@@ -68,7 +66,7 @@ def play_again():
 
 
 # this does a lot of the "routing".
-# Could likely be simplified with a list and two of statement for the mode variables.
+# Could likely be simplified with a list and two if statements for the mode variables.
 def sign(mode, total, level, name):
     for _ in range(3):
         try:

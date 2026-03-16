@@ -64,16 +64,25 @@ def total():
     sys.exit("Too many invalid attempts :( ")
 
 
-loading = "-------------------------------------"
+loading = "-" * 36
 
 
 def motivation(name):
     width = len(loading)
     motivation = "Let's go"
-
-    cool_name = pyfig.figlet_format(name, font=choice(pyfig.FigletFont.getFonts()))
+    all_fonts = pyfig.FigletFont.getFonts()
 
     if name == "":
         print(f"{loading}\n{motivation:^{width}}\n{loading}")
+
     else:
-        print(f"{loading}\n{motivation:^{width}}\n{loading}\n{cool_name:^{width}}")
+        # Generate the ASCII art
+        raw_cool_name = pyfig.figlet_format(name, font=choice(all_fonts))
+
+        # Center each line of the ASCII art individually
+        centered_cool_name = "\n".join(
+            line.center(width) for line in raw_cool_name.splitlines()
+        )
+
+        print(f"{loading}\n{motivation:^{width}}\n{loading}")
+        print(centered_cool_name)
