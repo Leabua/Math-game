@@ -276,7 +276,7 @@ class MenuScreen(Screen):
 
         draw_text(
             self.screen,
-            "Arrow Keys to Navigate | Enter to Select",
+            "Arrow Keys to Navigate | Enter to Select | F to Fullscreen",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - 40,
             "fg_dim",

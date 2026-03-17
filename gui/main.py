@@ -1,11 +1,5 @@
 import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent))
-
-import pygame
-pygame.init()
-
 from renderer import SCREEN_WIDTH, SCREEN_HEIGHT, COLORS, set_theme, get_theme, THEMES
 from screens import (
     ThemeScreen,
@@ -19,50 +13,71 @@ from screens import (
 )
 from stats_manager import existing_stats, get_stats_summary
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+import pygame
+
+pygame.init()
+
 
 def main():
     stats = existing_stats()
     if "theme" in stats:
         set_theme(stats["theme"])
-    
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    # Use SCALED for automatic scaling while keeping 800x600 internal resolution
+    # RESIZABLE allows the window to be resized and handles fullscreen better
+    flags = pygame.SCALED | pygame.RESIZABLE
+    screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
     pygame.display.set_caption("πMath")
-    
+
     clock = pygame.time.Clock()
-    
-    screen = OpeningScreen(screen)
-    
+
+    screen = OpeningScreen(screen_surface)
+
     game_config = {}
     game_result = {}
-    
+    fullscreen = False
+
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_f or event.key == pygame.K_F11:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        pygame.display.set_mode(
+                            (SCREEN_WIDTH, SCREEN_HEIGHT), flags | pygame.FULLSCREEN
+                        )
+                    else:
+                        pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
+
             if hasattr(screen, "handle_event"):
                 screen.handle_event(event)
-        
+
         if hasattr(screen, "update"):
             screen.update()
-        
+
         if hasattr(screen, "draw"):
             screen.draw()
-        
+
         pygame.display.flip()
         clock.tick(60)
-        
+
         if not screen.running:
             next_screen = getattr(screen, "next_screen", None)
-            
+
             if isinstance(screen, ThemeScreen):
                 set_theme(screen.selected_theme)
                 stats = existing_stats()
                 stats["theme"] = screen.selected_theme
                 from stats_manager import save_stats
+
                 save_stats(stats)
-            
+
             if next_screen == "theme":
                 screen = ThemeScreen(pygame.display.get_surface())
             elif next_screen == "opening":
@@ -89,7 +104,7 @@ def main():
                 screen = ExitScreen(pygame.display.get_surface())
             elif next_screen is None:
                 running = False
-            
+
             if next_screen == "setup":
                 if hasattr(screen, "questions"):
                     game_config = {
@@ -98,8 +113,7 @@ def main():
                         "operation": screen.operation,
                         "level": screen.level,
                     }
-            
-    
+
     pygame.quit()
     sys.exit()
 
