@@ -187,7 +187,7 @@ class ThemeScreen(Screen):
                 self.screen.blit(down_arrow, down_rect)
         footer_font = get_font(16)
         footer = footer_font.render(
-            "Navigate (▲▼) |Select(Enter)| Fullscreen (F) | Quit (Q)",
+            "Navigate (Arrow keys) |Select(Enter)| Fullscreen (F) | Quit (Q)",
             True,
             fg_dim_color,
         )
