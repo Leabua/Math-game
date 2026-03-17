@@ -7,8 +7,6 @@ from renderer import (
     set_theme,
     get_theme,
     THEMES,
-    draw_fullscreen_button,
-    FULLSCREEN_BUTTON_RECT,
 )
 from screens import (
     ThemeScreen,
@@ -63,18 +61,9 @@ def main():
                         )
                     else:
                         pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
-            
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    rect = pygame.Rect(FULLSCREEN_BUTTON_RECT)
-                    if rect.collidepoint(event.pos):
-                        fullscreen = not fullscreen
-                        if fullscreen:
-                            pygame.display.set_mode(
-                                (SCREEN_WIDTH, SCREEN_HEIGHT), flags | pygame.FULLSCREEN
-                            )
-                        else:
-                            pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
+                
+                if event.key == pygame.K_q:
+                    running = False
 
             if hasattr(screen, "handle_event"):
                 screen.handle_event(event)
@@ -84,7 +73,6 @@ def main():
 
         if hasattr(screen, "draw"):
             screen.draw()
-            draw_fullscreen_button(pygame.display.get_surface(), fullscreen)
 
         pygame.display.flip()
         clock.tick(60)

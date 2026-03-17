@@ -86,21 +86,32 @@ class ThemeScreen(Screen):
         super().__init__(screen)
         self.themes = list(THEMES.keys())
         self.theme_names = [THEMES[t]["name"] for t in self.themes]
-        self.selected_index = 0
-        self.selected_theme = "gruvbox_light"
+
+        # We start in the middle of a large list to simulate "infinite" scrolling
+        # 1000 repetitions is plenty for performance while being "hard to reach bottom"
+        self.repeats = 1000
+        from renderer import get_theme
+
+        current = get_theme()
+        base_index = self.themes.index(current) if current in self.themes else 0
+
+        self.selected_index = (self.repeats // 2) * len(self.themes) + base_index
+        self.selected_theme = current
 
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP or event.key == pygame.K_w:
-                self.selected_index = (self.selected_index - 1) % len(self.themes)
+                self.selected_index -= 1
             elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                self.selected_index = (self.selected_index + 1) % len(self.themes)
+                self.selected_index += 1
             elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                self.selected_theme = self.themes[self.selected_index]
+                actual_index = self.selected_index % len(self.themes)
+                self.selected_theme = self.themes[actual_index]
                 self.next_screen = "opening"
                 self.running = False
             elif event.key == pygame.K_ESCAPE:
-                self.selected_theme = self.themes[self.selected_index]
+                actual_index = self.selected_index % len(self.themes)
+                self.selected_theme = self.themes[actual_index]
                 self.next_screen = "opening"
                 self.running = False
 
@@ -108,7 +119,8 @@ class ThemeScreen(Screen):
         pass
 
     def draw(self):
-        preview_theme = THEMES[self.themes[self.selected_index]]
+        actual_index = self.selected_index % len(self.themes)
+        preview_theme = THEMES[self.themes[actual_index]]
 
         self.screen.fill(preview_theme["bg"])
 
@@ -120,31 +132,68 @@ class ThemeScreen(Screen):
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(100)))
         self.screen.blit(title, title_rect)
 
-        for i, theme_name in enumerate(self.theme_names):
-            y = sy(220) + i * sy(70)
-            if i == self.selected_index:
+        # Draw the picker wheel
+        center_x = SCREEN_WIDTH // 2
+        center_y = SCREEN_HEIGHT // 2
+        item_height = sy(80)
+
+        # Show 2 above and 2 below
+        for offset in range(-2, 3):
+            idx = (self.selected_index + offset) % len(self.themes)
+            name = self.theme_names[idx]
+
+            # Vertical position
+            y = center_y + offset * item_height
+
+            # Styling based on distance from center
+            dist = abs(offset)
+            if dist == 0:
+                font_size = 42
                 color = fg_color
-                prefix = "▶ "
-            else:
+                alpha = 255
+                bold = True
+            elif dist == 1:
+                font_size = 32
                 color = fg_dim_color
-                prefix = "  "
+                alpha = 180
+                bold = False
+            else:  # dist == 2
+                font_size = 24
+                color = fg_dim_color
+                alpha = 100
+                bold = False
 
-            prefix_surface = get_font(28).render(prefix, True, color)
-            text_surface = get_font(28).render(theme_name, True, color)
+            font = get_font(font_size, bold=bold)
+            text_surf = font.render(name, True, color)
+            text_surf.set_alpha(alpha)
+            rect = text_surf.get_rect(center=(center_x, y))
+            self.screen.blit(text_surf, rect)
 
-            total_width = prefix_surface.get_width() + text_surface.get_width()
-            start_x = SCREEN_WIDTH // 2 - total_width // 2
+            # Draw arrows for the active item
+            if offset == 0:
+                arrow_font = get_font(24, bold=True)
+                # Reduced offset to bring them closer to the active text
+                arrow_y_offset = sy(45)
 
-            self.screen.blit(prefix_surface, (start_x, y - sy(14)))
-            self.screen.blit(
-                text_surface, (start_x + prefix_surface.get_width(), y - sy(14))
-            )
+                # Using geometric characters for better symmetry
+                # Up arrow
+                up_arrow = arrow_font.render("▲", True, fg_color)
+                up_rect = up_arrow.get_rect(center=(center_x, y - arrow_y_offset))
+                self.screen.blit(up_arrow, up_rect)
 
+                # Down arrow
+                down_arrow = arrow_font.render("▼", True, fg_color)
+                down_rect = down_arrow.get_rect(center=(center_x, y + arrow_y_offset))
+                self.screen.blit(down_arrow, down_rect)
         footer_font = get_font(16)
         footer = footer_font.render(
-            "Arrow Keys to Navigate | Enter to Select", True, fg_dim_color
+            "Navigate (▲▼) |Select(Enter)| Fullscreen (F) | Quit (Q)",
+            True,
+            fg_dim_color,
         )
-        footer_rect = footer.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - sy(50)))
+        footer_rect = footer.get_rect(
+            center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - sy(50))
+        )
         self.screen.blit(footer, footer_rect)
 
 
@@ -171,7 +220,7 @@ class OpeningScreen(Screen):
             if self.subtitle_timer >= 3:
                 self.subtitle_index += 1
                 self.subtitle_timer = 0
-        
+
         # Subtitle fades out at the end
         if self.frame > self.duration - 60:
             self.subtitle_alpha = max(0, self.subtitle_alpha - 5)
@@ -199,7 +248,7 @@ class OpeningScreen(Screen):
         start_y = SCREEN_HEIGHT // 2 - sy(50)
         end_y = sy(120)
         current_y = start_y
-        
+
         if self.frame > self.duration - 120:
             t = (self.frame - (self.duration - 120)) / 120
             # Ease in-out quadratic
@@ -216,7 +265,7 @@ class OpeningScreen(Screen):
         partial_subtitle = self.subtitle[: self.subtitle_index]
         subtitle = subtitle_font.render(partial_subtitle, True, COLORS["fg_dim"])
         subtitle.set_alpha(self.subtitle_alpha)
-        
+
         # Move subtitle with logo if it's moving
         sub_y_offset = sy(70)
         subtitle_rect = subtitle.get_rect(
@@ -298,7 +347,7 @@ class MenuScreen(Screen):
 
         draw_text(
             self.screen,
-            "Arrow Keys to Navigate | Enter to Select | F to Fullscreen",
+            "Arrow Keys to Navigate | Enter to Select | F for Fullscreen | Q to Quit",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -488,7 +537,7 @@ class SetupScreen(Screen):
 
         draw_text(
             self.screen,
-            "ESC to go back",
+            "ESC to go back | F for Fullscreen | Q to Quit",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -657,40 +706,46 @@ class GameScreen(Screen):
 
         top_bar_y = sy(20)
         progress = (self.current_question) / self.total
+        bar_height = sy(20)
         draw_progress_bar(
             self.screen,
             sx(50),
             top_bar_y,
             SCREEN_WIDTH - sx(100),
-            sy(20),
+            bar_height,
             progress,
             "bg_dark",
             "green",
         )
 
+        # Labels below the progress bar
+        label_y = top_bar_y + bar_height + sy(10)
+
+        # Question counter on the left below bar
         draw_text(
             self.screen,
             f"Question {self.current_question + 1}/{self.total}",
-            SCREEN_WIDTH // 2,
-            top_bar_y + sy(50),
+            sx(50),
+            label_y,
             "fg_dim",
             18,
-            center=True,
         )
 
-        level_color = DIFFICULTY_COLORS[self.level]
+        # Difficulty on the right below bar
         level_name = DIFFICULTY_NAMES[self.level]
-        draw_text(self.screen, level_name, SCREEN_WIDTH - sx(100), sy(25), level_color, 16)
 
-        mode_display = "Solve" if self.mode == "solve_mode" else "Find X"
-        op_symbol = OPERATOR_SYMBOLS.get(self.operation, "+")
+        # Calculate width to right-align manually since renderer.draw_text doesn't support it directly
+        diff_font = get_font(16)
+        diff_width = diff_font.size(level_name)[0]
+
         draw_text(
             self.screen,
-            f"{mode_display} ({op_symbol})",
-            sx(80),
-            sy(25),
-            "blue",
+            level_name,
+            SCREEN_WIDTH - sx(50) - diff_width,
+            label_y,
+            "fg_dim",  # Standardized to fg_dim
             16,
+            center=False,
         )
 
         draw_text(
@@ -713,7 +768,7 @@ class GameScreen(Screen):
             sy(60),
             "bg_dark",
             "fg_dim",
-            2,
+            3,  # Updated to match new default
         )
 
         if self.show_answer:
@@ -764,11 +819,21 @@ class GameScreen(Screen):
             self.screen,
             f"Score: {self.score}",
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - sy(60),
+            SCREEN_HEIGHT - sy(80),
             "yellow",
             24,
             center=True,
             bold=True,
+        )
+
+        draw_text(
+            self.screen,
+            "F for Fullscreen | Q to Quit",
+            SCREEN_WIDTH // 2,
+            SCREEN_HEIGHT - sy(40),
+            "fg_dim",
+            16,
+            center=True,
         )
 
         self.particles.update()
@@ -889,7 +954,7 @@ class ResultsScreen(Screen):
 
         draw_text(
             self.screen,
-            "ESC to go back",
+            "ESC to go back | F for Fullscreen | Q to Quit",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -1087,7 +1152,7 @@ class StatsScreen(Screen):
 
         draw_text(
             self.screen,
-            "← → to change period | ESC to go back",
+            "← → to change period | ESC to go back | F for Fullscreen | Q to Quit",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -1115,10 +1180,8 @@ class ExitScreen(Screen):
             self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim"))
 
         self.floating_symbols = [
-            s for s in self.floating_symbols
-            if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
+            s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
         ]
-
 
         if self.frame > self.duration - 30:
             self.alpha = max(0, self.alpha - 10)
