@@ -60,7 +60,7 @@ class ParticleSystem:
                 COLORS["orange"],
                 COLORS["purple"],
             ]
-        
+
         for _ in range(count):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(sx(1), sx(spread))
@@ -68,7 +68,15 @@ class ParticleSystem:
             vy = math.sin(angle) * speed - sy(2)
             color = random.choice(colors)
             self.particles.append(
-                Particle(x, y, vx, vy, color, life=random.randint(40, 80), size=random.randint(2, 5))
+                Particle(
+                    x,
+                    y,
+                    vx,
+                    vy,
+                    color,
+                    life=random.randint(40, 80),
+                    size=random.randint(2, 5),
+                )
             )
 
     def emit_confetti(self, x: int, y: int, count: int = 100):
@@ -81,24 +89,40 @@ class ParticleSystem:
             COLORS["aqua"],
             COLORS["orange"],
         ]
-        
+
         for _ in range(count):
             vx = random.uniform(-sx(8), sx(8))
             vy = random.uniform(-sy(15), -sy(5))
             color = random.choice(colors)
             self.particles.append(
-                Particle(x, y, vx, vy, color, life=random.randint(120, 180), size=random.randint(3, 8))
+                Particle(
+                    x,
+                    y,
+                    vx,
+                    vy,
+                    color,
+                    life=random.randint(120, 180),
+                    size=random.randint(3, 8),
+                )
             )
 
     def emit_fire(self, x: int, y: int, count: int = 10):
         colors = [COLORS["orange"], COLORS["yellow"], COLORS["red"]]
-        
+
         for _ in range(count):
             vx = random.uniform(-1, 1)
             vy = random.uniform(-3, -1)
             color = random.choice(colors)
             self.particles.append(
-                Particle(x, y, vx, vy, color, life=random.randint(30, 60), size=random.randint(2, 4))
+                Particle(
+                    x,
+                    y,
+                    vx,
+                    vy,
+                    color,
+                    life=random.randint(30, 60),
+                    size=random.randint(2, 4),
+                )
             )
 
     def update(self) -> bool:

@@ -1,5 +1,11 @@
 import sys
 from pathlib import Path
+import pygame
+
+# Initialize pygame and paths before other local imports
+pygame.init()
+sys.path.insert(0, str(Path(__file__).parent))
+
 from renderer import (
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
@@ -20,20 +26,13 @@ from screens import (
 )
 from stats_manager import existing_stats, get_stats_summary
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-import pygame
-
-pygame.init()
-
 
 def main():
     stats = existing_stats()
     if "theme" in stats:
         set_theme(stats["theme"])
 
-    # Use SCALED for automatic scaling while keeping 800x600 internal resolution
-    # RESIZABLE allows the window to be resized and handles fullscreen better
+    # Use SCALED for automatic scaling while keeping high internal resolution
     flags = pygame.SCALED | pygame.RESIZABLE
     screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
     pygame.display.set_caption("πMath")
@@ -85,7 +84,6 @@ def main():
                 stats = existing_stats()
                 stats["theme"] = screen.selected_theme
                 from stats_manager import save_stats
-
                 save_stats(stats)
 
             if isinstance(screen, SetupScreen):

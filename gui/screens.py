@@ -558,6 +558,7 @@ class GameScreen(Screen):
         self.current_question = 0
         self.score = 0
         self.input_text = ""
+        self.tries = 0  # Track number of tries for current question
 
         self.problem = self.generate_problem()
         self.feedback = None
@@ -662,20 +663,30 @@ class GameScreen(Screen):
                     SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + sy(50), 30
                 )
                 self.feedback = "correct"
+                self.show_answer = True
+                self.tries = 0
             else:
+                self.tries += 1
                 self.shake = ScreenShake(8, 15)
                 self.flash = FlashEffect("red", 15)
-                self.feedback = "wrong"
-                self.correct_answer = self.problem["answer"]
+                
+                if self.tries >= 3:
+                    self.feedback = "wrong"
+                    self.correct_answer = self.problem["answer"]
+                    self.show_answer = True
+                    self.tries = 0
+                else:
+                    self.feedback = "try_again"
+                    self.input_text = ""
 
             self.feedback_timer = 60
-            self.show_answer = True
-            self.current_question += 1
 
         except ValueError:
             pass
 
     def next_question(self):
+        self.current_question += 1  # Increment only when moving to next
+        
         if self.current_question >= self.total:
             stats = existing_stats()
             stats = update_stats(
@@ -689,6 +700,7 @@ class GameScreen(Screen):
             self.problem = self.generate_problem()
             self.feedback = None
             self.show_answer = False
+            self.tries = 0
 
     def update(self):
         if self.feedback_timer > 0:
@@ -722,9 +734,10 @@ class GameScreen(Screen):
         label_y = top_bar_y + bar_height + sy(10)
 
         # Question counter on the left below bar
+        display_question = min(self.current_question + 1, self.total)
         draw_text(
             self.screen,
-            f"Question {self.current_question + 1}/{self.total}",
+            f"Question {display_question}/{self.total}",
             sx(50),
             label_y,
             "fg_dim",
@@ -814,6 +827,18 @@ class GameScreen(Screen):
                 center=True,
                 bold=True,
             )
+
+            # Show "Try again" or "Tries" indicator
+            if self.tries > 0:
+                draw_text(
+                    self.screen,
+                    f"Try again! ({self.tries}/3)",
+                    SCREEN_WIDTH // 2,
+                    input_bg_y + sy(75),
+                    "orange",
+                    16,
+                    center=True,
+                )
 
         draw_text(
             self.screen,
@@ -1101,6 +1126,7 @@ class StatsScreen(Screen):
                 fig.set_ylabel("%", color=COLORS["fg_dim"], font_size=10)
                 fig.draw()
             except Exception as e:
+                print(f"Chart Error: {e}")
                 draw_text(
                     self.screen,
                     "Chart unavailable",
