@@ -1,6 +1,15 @@
 import sys
 from pathlib import Path
-from renderer import SCREEN_WIDTH, SCREEN_HEIGHT, COLORS, set_theme, get_theme, THEMES
+from renderer import (
+    SCREEN_WIDTH,
+    SCREEN_HEIGHT,
+    COLORS,
+    set_theme,
+    get_theme,
+    THEMES,
+    draw_fullscreen_button,
+    FULLSCREEN_BUTTON_RECT,
+)
 from screens import (
     ThemeScreen,
     OpeningScreen,
@@ -54,6 +63,18 @@ def main():
                         )
                     else:
                         pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    rect = pygame.Rect(FULLSCREEN_BUTTON_RECT)
+                    if rect.collidepoint(event.pos):
+                        fullscreen = not fullscreen
+                        if fullscreen:
+                            pygame.display.set_mode(
+                                (SCREEN_WIDTH, SCREEN_HEIGHT), flags | pygame.FULLSCREEN
+                            )
+                        else:
+                            pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
 
             if hasattr(screen, "handle_event"):
                 screen.handle_event(event)
@@ -63,6 +84,7 @@ def main():
 
         if hasattr(screen, "draw"):
             screen.draw()
+            draw_fullscreen_button(pygame.display.get_surface(), fullscreen)
 
         pygame.display.flip()
         clock.tick(60)
@@ -77,6 +99,15 @@ def main():
                 from stats_manager import save_stats
 
                 save_stats(stats)
+
+            if isinstance(screen, SetupScreen):
+                if next_screen == "game":
+                    game_config = {
+                        "questions": screen.questions,
+                        "mode": screen.mode,
+                        "operation": screen.operation,
+                        "level": screen.level,
+                    }
 
             if next_screen == "theme":
                 screen = ThemeScreen(pygame.display.get_surface())
@@ -104,15 +135,6 @@ def main():
                 screen = ExitScreen(pygame.display.get_surface())
             elif next_screen is None:
                 running = False
-
-            if next_screen == "setup":
-                if hasattr(screen, "questions"):
-                    game_config = {
-                        "questions": screen.questions,
-                        "mode": screen.mode,
-                        "operation": screen.operation,
-                        "level": screen.level,
-                    }
 
     pygame.quit()
     sys.exit()

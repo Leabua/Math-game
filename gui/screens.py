@@ -17,6 +17,8 @@ from renderer import (
     draw_centered_box,
     draw_progress_bar,
     get_font,
+    sx,
+    sy,
 )
 from animations import (
     ParticleSystem,
@@ -115,11 +117,11 @@ class ThemeScreen(Screen):
 
         title_font = get_font(48, bold=True)
         title = title_font.render("Choose Theme", True, fg_color)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(100)))
         self.screen.blit(title, title_rect)
 
         for i, theme_name in enumerate(self.theme_names):
-            y = 220 + i * 70
+            y = sy(220) + i * sy(70)
             if i == self.selected_index:
                 color = fg_color
                 prefix = "▶ "
@@ -133,16 +135,16 @@ class ThemeScreen(Screen):
             total_width = prefix_surface.get_width() + text_surface.get_width()
             start_x = SCREEN_WIDTH // 2 - total_width // 2
 
-            self.screen.blit(prefix_surface, (start_x, y - 14))
+            self.screen.blit(prefix_surface, (start_x, y - sy(14)))
             self.screen.blit(
-                text_surface, (start_x + prefix_surface.get_width(), y - 14)
+                text_surface, (start_x + prefix_surface.get_width(), y - sy(14))
             )
 
         footer_font = get_font(16)
         footer = footer_font.render(
             "Arrow Keys to Navigate | Enter to Select", True, fg_dim_color
         )
-        footer_rect = footer.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
+        footer_rect = footer.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - sy(50)))
         self.screen.blit(footer, footer_rect)
 
 
@@ -150,12 +152,13 @@ class OpeningScreen(Screen):
     def __init__(self, screen: pygame.Surface):
         super().__init__(screen)
         self.frame = 0
-        self.duration = 180
+        self.duration = 360  # Increased to 6 seconds (at 60fps)
         self.floating_symbols: List[FloatingSymbol] = []
         self.title_alpha = 0
         self.subtitle_index = 0
         self.subtitle = "Math is for everyone"
         self.subtitle_timer = 0
+        self.subtitle_alpha = 255
 
     def update(self):
         self.frame += 1
@@ -168,12 +171,16 @@ class OpeningScreen(Screen):
             if self.subtitle_timer >= 3:
                 self.subtitle_index += 1
                 self.subtitle_timer = 0
+        
+        # Subtitle fades out at the end
+        if self.frame > self.duration - 60:
+            self.subtitle_alpha = max(0, self.subtitle_alpha - 5)
 
         if self.frame % 30 == 0:
             symbol = random.choice(SYMBOLS)
-            x = random.randint(50, SCREEN_WIDTH - 50)
-            y = -30
-            speed = random.uniform(0.5, 2.0)
+            x = random.randint(sx(50), SCREEN_WIDTH - sx(50))
+            y = -sy(30)
+            speed = random.uniform(sy(0.5), sy(2.0))
             color = random.choice(["fg_dim", "fg_dim", "fg_dim"])
             self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, color))
 
@@ -188,17 +195,32 @@ class OpeningScreen(Screen):
     def draw(self):
         self.screen.fill(COLORS["bg"])
 
+        # Interpolate logo position towards menu position in last 120 frames (2 seconds)
+        start_y = SCREEN_HEIGHT // 2 - sy(50)
+        end_y = sy(120)
+        current_y = start_y
+        
+        if self.frame > self.duration - 120:
+            t = (self.frame - (self.duration - 120)) / 120
+            # Ease in-out quadratic
+            t = 2 * t * t if t < 0.5 else 1 - pow(-2 * t + 2, 2) / 2
+            current_y = start_y + (end_y - start_y) * t
+
         title_font = get_font(72, bold=True)
         title = title_font.render("πMath", True, COLORS["fg"])
         title.set_alpha(self.title_alpha)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, current_y))
         self.screen.blit(title, title_rect)
 
         subtitle_font = get_font(24)
         partial_subtitle = self.subtitle[: self.subtitle_index]
         subtitle = subtitle_font.render(partial_subtitle, True, COLORS["fg_dim"])
+        subtitle.set_alpha(self.subtitle_alpha)
+        
+        # Move subtitle with logo if it's moving
+        sub_y_offset = sy(70)
         subtitle_rect = subtitle.get_rect(
-            center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20)
+            center=(SCREEN_WIDTH // 2, current_y + sub_y_offset)
         )
         self.screen.blit(subtitle, subtitle_rect)
 
@@ -256,11 +278,11 @@ class MenuScreen(Screen):
 
         title_font = get_font(64, bold=True)
         title = title_font.render("πMath", True, COLORS["fg"])
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 120))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(120)))
         self.screen.blit(title, title_rect)
 
         for i, option in enumerate(self.options):
-            y = 250 + i * 70
+            y = sy(250) + i * sy(70)
             color = "fg" if i == self.selected_index else "fg_dim"
             prefix = "▶ " if i == self.selected_index else "  "
             draw_text(
@@ -278,7 +300,7 @@ class MenuScreen(Screen):
             self.screen,
             "Arrow Keys to Navigate | Enter to Select | F to Fullscreen",
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - 40,
+            SCREEN_HEIGHT - sy(40),
             "fg_dim",
             16,
             center=True,
@@ -354,7 +376,7 @@ class SetupScreen(Screen):
             self.screen,
             "Setup Game",
             SCREEN_WIDTH // 2,
-            60,
+            sy(60),
             "fg",
             36,
             center=True,
@@ -366,7 +388,7 @@ class SetupScreen(Screen):
                 self.screen,
                 "How many questions?",
                 SCREEN_WIDTH // 2,
-                150,
+                sy(150),
                 "fg",
                 24,
                 center=True,
@@ -375,7 +397,7 @@ class SetupScreen(Screen):
                 self.screen,
                 self.input_text + "_",
                 SCREEN_WIDTH // 2,
-                220,
+                sy(220),
                 "aqua",
                 48,
                 center=True,
@@ -387,7 +409,7 @@ class SetupScreen(Screen):
                 self.screen,
                 "Choose Mode",
                 SCREEN_WIDTH // 2,
-                150,
+                sy(150),
                 "fg",
                 24,
                 center=True,
@@ -399,7 +421,7 @@ class SetupScreen(Screen):
                     self.screen,
                     prefix + mode,
                     SCREEN_WIDTH // 2,
-                    220 + i * 50,
+                    sy(220) + i * sy(50),
                     color,
                     24,
                     center=True,
@@ -411,7 +433,7 @@ class SetupScreen(Screen):
                 self.screen,
                 "Choose Operation",
                 SCREEN_WIDTH // 2,
-                150,
+                sy(150),
                 "fg",
                 24,
                 center=True,
@@ -429,7 +451,7 @@ class SetupScreen(Screen):
                     self.screen,
                     prefix + op,
                     SCREEN_WIDTH // 2,
-                    220 + i * 50,
+                    sy(220) + i * sy(50),
                     color,
                     24,
                     center=True,
@@ -441,7 +463,7 @@ class SetupScreen(Screen):
                 self.screen,
                 "Choose Difficulty",
                 SCREEN_WIDTH // 2,
-                150,
+                sy(150),
                 "fg",
                 24,
                 center=True,
@@ -457,7 +479,7 @@ class SetupScreen(Screen):
                     self.screen,
                     prefix + level_name,
                     SCREEN_WIDTH // 2,
-                    220 + i * 50,
+                    sy(220) + i * sy(50),
                     color,
                     24,
                     center=True,
@@ -468,7 +490,7 @@ class SetupScreen(Screen):
             self.screen,
             "ESC to go back",
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - 40,
+            SCREEN_HEIGHT - sy(40),
             "fg_dim",
             16,
             center=True,
@@ -588,7 +610,7 @@ class GameScreen(Screen):
             if user_answer == self.problem["answer"]:
                 self.score += 1
                 self.particles.emit_burst(
-                    SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50, 30
+                    SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + sy(50), 30
                 )
                 self.feedback = "correct"
             else:
@@ -633,14 +655,14 @@ class GameScreen(Screen):
         self.screen.fill(COLORS["bg"])
         self.screen.blit(screen_copy, (offset_x, offset_y))
 
-        top_bar_y = 20
+        top_bar_y = sy(20)
         progress = (self.current_question) / self.total
         draw_progress_bar(
             self.screen,
-            50,
+            sx(50),
             top_bar_y,
-            SCREEN_WIDTH - 100,
-            20,
+            SCREEN_WIDTH - sx(100),
+            sy(20),
             progress,
             "bg_dark",
             "green",
@@ -650,7 +672,7 @@ class GameScreen(Screen):
             self.screen,
             f"Question {self.current_question + 1}/{self.total}",
             SCREEN_WIDTH // 2,
-            top_bar_y + 50,
+            top_bar_y + sy(50),
             "fg_dim",
             18,
             center=True,
@@ -658,15 +680,15 @@ class GameScreen(Screen):
 
         level_color = DIFFICULTY_COLORS[self.level]
         level_name = DIFFICULTY_NAMES[self.level]
-        draw_text(self.screen, level_name, SCREEN_WIDTH - 100, 25, level_color, 16)
+        draw_text(self.screen, level_name, SCREEN_WIDTH - sx(100), sy(25), level_color, 16)
 
         mode_display = "Solve" if self.mode == "solve_mode" else "Find X"
         op_symbol = OPERATOR_SYMBOLS.get(self.operation, "+")
         draw_text(
             self.screen,
             f"{mode_display} ({op_symbol})",
-            80,
-            25,
+            sx(80),
+            sy(25),
             "blue",
             16,
         )
@@ -675,20 +697,20 @@ class GameScreen(Screen):
             self.screen,
             self.problem["display"],
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT // 2 - 60,
+            SCREEN_HEIGHT // 2 - sy(60),
             "fg",
             48,
             center=True,
             bold=True,
         )
 
-        input_bg_y = SCREEN_HEIGHT // 2 + 20
+        input_bg_y = SCREEN_HEIGHT // 2 + sy(20)
         draw_centered_box(
             self.screen,
             SCREEN_WIDTH // 2,
-            input_bg_y + 30,
-            200,
-            60,
+            input_bg_y + sy(30),
+            sx(200),
+            sy(60),
             "bg_dark",
             "fg_dim",
             2,
@@ -700,7 +722,7 @@ class GameScreen(Screen):
                     self.screen,
                     "✓ Correct!",
                     SCREEN_WIDTH // 2,
-                    input_bg_y + 30,
+                    input_bg_y + sy(30),
                     "green",
                     32,
                     center=True,
@@ -711,7 +733,7 @@ class GameScreen(Screen):
                     self.screen,
                     f"Answer: {self.correct_answer}",
                     SCREEN_WIDTH // 2,
-                    input_bg_y + 30,
+                    input_bg_y + sy(30),
                     "red",
                     28,
                     center=True,
@@ -721,7 +743,7 @@ class GameScreen(Screen):
                     self.screen,
                     "Press Enter to continue",
                     SCREEN_WIDTH // 2,
-                    input_bg_y + 70,
+                    input_bg_y + sy(70),
                     "fg_dim",
                     16,
                     center=True,
@@ -731,7 +753,7 @@ class GameScreen(Screen):
                 self.screen,
                 self.input_text + "_",
                 SCREEN_WIDTH // 2,
-                input_bg_y + 30,
+                input_bg_y + sy(30),
                 "aqua",
                 36,
                 center=True,
@@ -742,7 +764,7 @@ class GameScreen(Screen):
             self.screen,
             f"Score: {self.score}",
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - 60,
+            SCREEN_HEIGHT - sy(60),
             "yellow",
             24,
             center=True,
@@ -811,7 +833,7 @@ class ResultsScreen(Screen):
                 self.screen,
                 "🎉 PERFECT! 🎉",
                 SCREEN_WIDTH // 2,
-                80,
+                sy(80),
                 "yellow",
                 48,
                 center=True,
@@ -822,7 +844,7 @@ class ResultsScreen(Screen):
             self.screen,
             f"{self.score}/{self.total}",
             SCREEN_WIDTH // 2,
-            160,
+            sy(160),
             "fg",
             64,
             center=True,
@@ -833,7 +855,7 @@ class ResultsScreen(Screen):
             self.screen,
             f"{self.percentage:.0f}%",
             SCREEN_WIDTH // 2,
-            230,
+            sy(230),
             "aqua",
             36,
             center=True,
@@ -844,14 +866,14 @@ class ResultsScreen(Screen):
                 self.screen,
                 f"🔥 {self.current_streak} streak!",
                 SCREEN_WIDTH // 2,
-                290,
+                sy(290),
                 "orange",
                 24,
                 center=True,
             )
 
         for i, option in enumerate(self.options):
-            y = 380 + i * 60
+            y = sy(380) + i * sy(60)
             color = "fg" if i == self.selected_index else "fg_dim"
             prefix = "▶ " if i == self.selected_index else "  "
             draw_text(
@@ -869,7 +891,7 @@ class ResultsScreen(Screen):
             self.screen,
             "ESC to go back",
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - 40,
+            SCREEN_HEIGHT - sy(40),
             "fg_dim",
             16,
             center=True,
@@ -927,25 +949,25 @@ class StatsScreen(Screen):
         )
 
         for i, period in enumerate(self.period_options):
-            x = 200 + i * 150
+            x = sx(200) + i * sx(150)
             color = "fg" if i == self.selected_period_index else "fg_dim"
             draw_text(
                 self.screen,
                 self.period_labels[period],
                 x,
-                75,
+                sy(75),
                 color,
                 18,
                 center=True,
                 bold=(i == self.selected_period_index),
             )
 
-        y_offset = 120
+        y_offset = sy(120)
 
         draw_text(
             self.screen,
             f"Games Played: {self.summary['games_played']}",
-            80,
+            sx(80),
             y_offset,
             "fg",
             20,
@@ -953,39 +975,39 @@ class StatsScreen(Screen):
         draw_text(
             self.screen,
             f"Total Questions: {self.summary['total_questions']}",
-            80,
-            y_offset + 30,
+            sx(80),
+            y_offset + sy(30),
             "fg",
             20,
         )
         draw_text(
             self.screen,
             f"Accuracy: {self.summary['overall_accuracy']:.1f}%",
-            80,
-            y_offset + 60,
+            sx(80),
+            y_offset + sy(60),
             "aqua",
             20,
         )
         draw_text(
             self.screen,
             f"Best Score: {self.summary['best_score_percent']:.1f}%",
-            80,
-            y_offset + 90,
+            sx(80),
+            y_offset + sy(90),
             "yellow",
             20,
         )
         draw_text(
             self.screen,
             f"Best Streak: {self.summary['best_streak']}",
-            80,
-            y_offset + 120,
+            sx(80),
+            y_offset + sy(120),
             "orange",
             20,
         )
 
         if CHART_AVAILABLE and self.chart_data["sessions"]:
-            chart_x, chart_y = 380, 120
-            chart_w, chart_h = 380, 200
+            chart_x, chart_y = sx(380), sy(120)
+            chart_w, chart_h = sx(380), sy(200)
 
             draw_box(
                 self.screen, chart_x, chart_y, chart_w, chart_h, "bg_dark", "fg_dim", 1
@@ -1028,15 +1050,15 @@ class StatsScreen(Screen):
                 self.screen,
                 "No data for this period",
                 SCREEN_WIDTH // 2,
-                250,
+                sy(250),
                 "fg_dim",
                 20,
                 center=True,
             )
 
         if CHART_AVAILABLE and self.chart_data["sessions"]:
-            bar_x, bar_y = 80, 350
-            bar_w, bar_h = 300, 150
+            bar_x, bar_y = sx(80), sy(350)
+            bar_w, bar_h = sx(300), sy(150)
             draw_box(self.screen, bar_x, bar_y, bar_w, bar_h, "bg_dark", "fg_dim", 1)
 
             try:
@@ -1067,7 +1089,7 @@ class StatsScreen(Screen):
             self.screen,
             "← → to change period | ESC to go back",
             SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - 40,
+            SCREEN_HEIGHT - sy(40),
             "fg_dim",
             16,
             center=True,
@@ -1087,14 +1109,16 @@ class ExitScreen(Screen):
 
         if random.randint(0, 10) == 0:
             symbol = random.choice(SYMBOLS)
-            x = random.randint(50, SCREEN_WIDTH - 50)
-            y = SCREEN_HEIGHT + 30
-            speed = random.uniform(-2, -0.5)
+            x = random.randint(sx(50), SCREEN_WIDTH - sx(50))
+            y = SCREEN_HEIGHT + sy(30)
+            speed = random.uniform(-sy(2), -sy(0.5))
             self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim"))
 
         self.floating_symbols = [
-            s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
+            s for s in self.floating_symbols
+            if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
         ]
+
 
         if self.frame > self.duration - 30:
             self.alpha = max(0, self.alpha - 10)
@@ -1113,7 +1137,7 @@ class ExitScreen(Screen):
             title = title_font.render("Thanks for Playing!", True, COLORS["fg"])
             title.set_alpha(self.alpha)
             title_rect = title.get_rect(
-                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30)
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - sy(30))
             )
             self.screen.blit(title, title_rect)
 
@@ -1121,7 +1145,7 @@ class ExitScreen(Screen):
                 self.screen,
                 "Come back soon!",
                 SCREEN_WIDTH // 2,
-                SCREEN_HEIGHT // 2 + 30,
+                SCREEN_HEIGHT // 2 + sy(30),
                 "fg_dim",
                 24,
                 center=True,

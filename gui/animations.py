@@ -2,7 +2,7 @@ import pygame
 import random
 import math
 from typing import List, Tuple
-from renderer import COLORS
+from renderer import COLORS, sx, sy
 
 
 class Particle:
@@ -23,8 +23,8 @@ class Particle:
         self.color = color
         self.life = life
         self.max_life = life
-        self.size = size
-        self.gravity = 0.1
+        self.size = sx(size)
+        self.gravity = sy(1) * 0.1
 
     def update(self) -> bool:
         self.x += self.vx
@@ -63,9 +63,9 @@ class ParticleSystem:
         
         for _ in range(count):
             angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(1, spread)
+            speed = random.uniform(sx(1), sx(spread))
             vx = math.cos(angle) * speed
-            vy = math.sin(angle) * speed - 2
+            vy = math.sin(angle) * speed - sy(2)
             color = random.choice(colors)
             self.particles.append(
                 Particle(x, y, vx, vy, color, life=random.randint(40, 80), size=random.randint(2, 5))
@@ -83,8 +83,8 @@ class ParticleSystem:
         ]
         
         for _ in range(count):
-            vx = random.uniform(-8, 8)
-            vy = random.uniform(-15, -5)
+            vx = random.uniform(-sx(8), sx(8))
+            vy = random.uniform(-sy(15), -sy(5))
             color = random.choice(colors)
             self.particles.append(
                 Particle(x, y, vx, vy, color, life=random.randint(120, 180), size=random.randint(3, 8))
