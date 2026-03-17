@@ -187,7 +187,7 @@ class ThemeScreen(Screen):
                 self.screen.blit(down_arrow, down_rect)
         footer_font = get_font(16)
         footer = footer_font.render(
-            "Navigate (Arrow keys) |Select(Enter)| Fullscreen (F) | Quit (Q)",
+            "Navigate (▼▲) | Select (Enter)| Fullscreen (F) | Quit (Q)",
             True,
             fg_dim_color,
         )
@@ -347,7 +347,7 @@ class MenuScreen(Screen):
 
         draw_text(
             self.screen,
-            "Arrow Keys to Navigate | Enter to Select | F for Fullscreen | Q to Quit",
+            "Navigate (▼▲) |Select (Enter)| Fullscreen (F) | Quit (Q)",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -537,7 +537,7 @@ class SetupScreen(Screen):
 
         draw_text(
             self.screen,
-            "ESC to go back | F for Fullscreen | Q to Quit",
+            "Go back (ESC) | Fullscreen (F) | Quit (Q)",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -828,7 +828,7 @@ class GameScreen(Screen):
 
         draw_text(
             self.screen,
-            "F for Fullscreen | Q to Quit",
+            "Fullscreen (F)| Quit (Q)",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -954,7 +954,7 @@ class ResultsScreen(Screen):
 
         draw_text(
             self.screen,
-            "ESC to go back | F for Fullscreen | Q to Quit",
+            "Go back (ESC) | Fullscreen (F) | Quit (Q)",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
