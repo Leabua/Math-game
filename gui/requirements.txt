@@ -1,0 +1,8 @@
+# Install pygame-ce FIRST, then pygame-chart
+# pygame 2.6.1 conflicts with Python 3.14 - must use pygame-ce
+
+# Install pygame-ce first (required for Python 3.14 compatibility)
+pygame-ce>=2.5.0
+
+# Install pygame-chart second - it will try to install pygame as dependency but we'll ignore it
+pygame-chart>=1.0.0
