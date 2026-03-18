@@ -37,6 +37,7 @@ from stats_manager import (
 
 try:
     import pygame_chart
+    from pygame_chart import settings as chart_settings
 
     CHART_AVAILABLE = True
 except ImportError:
@@ -574,8 +575,7 @@ class GameScreen(Screen):
     def generate_problem(self) -> dict:
         from utilities.game_logic import generate_integer
 
-        x = generate_integer(self.level)
-        y = generate_integer(self.level)
+        x, y = generate_integer(self.level), generate_integer(self.level)
 
         if self.operation == "addition":
             if self.mode == "solve_mode":
@@ -585,11 +585,10 @@ class GameScreen(Screen):
                     "x": x,
                     "y": y,
                     "answer": x,
-                    "display": f"x + {y} = {x + y}, x = ?",
+                    "display": f"[x] + {y} = {x + y}.\nx = ?",
                 }
 
         elif self.operation == "subtraction":
-            x, y = max(x, y), min(x, y)
             if self.mode == "solve_mode":
                 return {"x": x, "y": y, "answer": x - y, "display": f"{x} - {y} = ?"}
             else:
@@ -597,7 +596,7 @@ class GameScreen(Screen):
                     "x": x,
                     "y": y,
                     "answer": x,
-                    "display": f"x - {y} = {x - y}, x = ?",
+                    "display": f"[x] - {y} = {x - y}.\nx = ?",
                 }
 
         elif self.operation == "multiplication":
@@ -608,9 +607,10 @@ class GameScreen(Screen):
                     "x": x,
                     "y": y,
                     "answer": x,
-                    "display": f"x × {y} = {x * y}, x = ?",
+                    "display": f"[x] × {y} = {x * y}.\nx = ?",
                 }
 
+            # need to work on the division logic here
         elif self.operation == "division":
             factor = generate_integer(max(1, self.level - 1))
             dividend = y * factor
@@ -626,7 +626,7 @@ class GameScreen(Screen):
                     "x": dividend,
                     "y": y,
                     "answer": factor,
-                    "display": f"x ÷ {y} = {factor}, x = ?",
+                    "display": f"[x] ÷ {y} = {factor}.\nx = ?",
                 }
 
         return {"x": x, "y": y, "answer": x + y, "display": f"{x} + {y} = ?"}
@@ -669,7 +669,7 @@ class GameScreen(Screen):
                 self.tries += 1
                 self.shake = ScreenShake(8, 15)
                 self.flash = FlashEffect("red", 15)
-                
+
                 if self.tries >= 3:
                     self.feedback = "wrong"
                     self.correct_answer = self.problem["answer"]
@@ -686,7 +686,7 @@ class GameScreen(Screen):
 
     def next_question(self):
         self.current_question += 1  # Increment only when moving to next
-        
+
         if self.current_question >= self.total:
             stats = existing_stats()
             stats = update_stats(
@@ -921,7 +921,7 @@ class ResultsScreen(Screen):
         if self.is_perfect:
             draw_text(
                 self.screen,
-                "🎉 PERFECT! 🎉",
+                "PERFECT!",
                 SCREEN_WIDTH // 2,
                 sy(80),
                 "yellow",
@@ -954,7 +954,7 @@ class ResultsScreen(Screen):
         if self.current_streak > 0:
             draw_text(
                 self.screen,
-                f"🔥 {self.current_streak} streak!",
+                f"{self.current_streak} streak!",
                 SCREEN_WIDTH // 2,
                 sy(290),
                 "orange",
@@ -1104,6 +1104,11 @@ class StatsScreen(Screen):
             )
 
             try:
+                if CHART_AVAILABLE:
+                    chart_settings.TEXT_COLOR = COLORS["fg"]
+                    chart_settings.GRID_COLOR = COLORS["fg_dim"]
+                    chart_settings.TITLE_FONT_SIZE = 14
+
                 fig = pygame_chart.Figure(
                     self.screen,
                     chart_x,
@@ -1120,11 +1125,21 @@ class StatsScreen(Screen):
                         self.chart_data["accuracy"],
                         color=COLORS["aqua"],
                     )
+                
+                # Ensure y-range > 0 to avoid crash if all values are identical
+                fig.set_ylim((0, 100))
 
-                fig.set_title("Accuracy %", color=COLORS["fg"], font_size=14)
-                fig.set_xlabel("Session", color=COLORS["fg_dim"], font_size=10)
-                fig.set_ylabel("%", color=COLORS["fg_dim"], font_size=10)
+                # Ensure x-range > 0 to avoid crash if there is only one data point
+                if len(self.chart_data["sessions"]) == 1:
+                    fig.set_xlim((0, 2))
+
+                fig.add_title("Accuracy %")
+                fig.add_xaxis_label("Session")
+                fig.add_yaxis_label("%")
+                fig.add_gridlines()
                 fig.draw()
+                # Hack: Library blits background too early (before elements are drawn on it)
+                self.screen.blit(fig.background, (chart_x, chart_y))
             except Exception as e:
                 print(f"Chart Error: {e}")
                 draw_text(
@@ -1169,10 +1184,19 @@ class StatsScreen(Screen):
                     color=COLORS["blue"],
                 )
 
-                fig2.set_title(
-                    "Questions per Session", color=COLORS["fg"], font_size=14
-                )
+                # Ensure y-range > 0 to avoid crash if all values are identical
+                max_q = max(self.chart_data["questions"]) if self.chart_data["questions"] else 0
+                fig2.set_ylim((0, max(1, max_q + 1)))
+
+                # Ensure x-range > 0 to avoid crash if there is only one data point
+                if len(self.chart_data["sessions"]) == 1:
+                    fig2.set_xlim((0, 2))
+
+                fig2.add_title("Questions per Session")
+                fig2.add_gridlines()
                 fig2.draw()
+                # Hack: Library blits background too early
+                self.screen.blit(fig2.background, (bar_x, bar_y))
             except:
                 pass
 
