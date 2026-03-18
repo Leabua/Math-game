@@ -67,8 +67,9 @@ SYMBOLS = ["+", "-", "×", "÷", "=", "?"]
 
 
 class Screen:
-    def __init__(self, screen: pygame.Surface):
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
         self.screen = screen
+        self.sound = sound_manager
         self.running = True
         self.next_screen: Optional[str] = None
 
@@ -83,13 +84,11 @@ class Screen:
 
 
 class ThemeScreen(Screen):
-    def __init__(self, screen: pygame.Surface):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.themes = list(THEMES.keys())
         self.theme_names = [THEMES[t]["name"] for t in self.themes]
 
-        # We start in the middle of a large list to simulate "infinite" scrolling
-        # 1000 repetitions is plenty for performance while being "hard to reach bottom"
         self.repeats = 1000
         from renderer import get_theme
 
@@ -103,16 +102,24 @@ class ThemeScreen(Screen):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP or event.key == pygame.K_w:
                 self.selected_index -= 1
+                if self.sound:
+                    self.sound.play_sound("select")
             elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 self.selected_index += 1
+                if self.sound:
+                    self.sound.play_sound("select")
             elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                 actual_index = self.selected_index % len(self.themes)
                 self.selected_theme = self.themes[actual_index]
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.next_screen = "opening"
                 self.running = False
             elif event.key == pygame.K_ESCAPE:
                 actual_index = self.selected_index % len(self.themes)
                 self.selected_theme = self.themes[actual_index]
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.next_screen = "opening"
                 self.running = False
 
@@ -199,18 +206,22 @@ class ThemeScreen(Screen):
 
 
 class OpeningScreen(Screen):
-    def __init__(self, screen: pygame.Surface):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.frame = 0
-        self.duration = 360  # Increased to 6 seconds (at 60fps)
+        self.duration = 360
         self.floating_symbols: List[FloatingSymbol] = []
         self.title_alpha = 0
         self.subtitle_index = 0
         self.subtitle = "Math is for everyone"
         self.subtitle_timer = 0
         self.subtitle_alpha = 255
+        self.music_started = False
 
     def update(self):
+        if not self.music_started and self.sound:
+            self.sound.start_music()
+            self.music_started = True
         self.frame += 1
 
         if self.frame < 100:
@@ -279,32 +290,51 @@ class OpeningScreen(Screen):
 
 
 class MenuScreen(Screen):
-    def __init__(self, screen: pygame.Surface):
-        super().__init__(screen)
-        self.options = ["Play", "Theme", "Stats", "Quit"]
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
+        super().__init__(screen, sound_manager)
+        self.options = ["Play", "Theme", "Stats", "Sound", "Quit"]
         self.selected_index = 0
         self.floating_symbols: List[FloatingSymbol] = []
+        self.sound_enabled = sound_manager.enabled if sound_manager else False
+        self.sound_toggle_changed = False
 
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP or event.key == pygame.K_w:
                 self.selected_index = (self.selected_index - 1) % len(self.options)
+                if self.sound:
+                    self.sound.play_sound("select")
             elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 self.selected_index = (self.selected_index + 1) % len(self.options)
+                if self.sound:
+                    self.sound.play_sound("select")
             elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                 self.select_option()
 
     def select_option(self):
         if self.selected_index == 0:
+            if self.sound:
+                self.sound.play_sound("select")
             self.next_screen = "setup"
             self.running = False
         elif self.selected_index == 1:
+            if self.sound:
+                self.sound.play_sound("select")
             self.next_screen = "theme"
             self.running = False
         elif self.selected_index == 2:
+            if self.sound:
+                self.sound.play_sound("select")
             self.next_screen = "stats"
             self.running = False
         elif self.selected_index == 3:
+            self.sound_enabled = not self.sound_enabled
+            self.sound_toggle_changed = True
+            if self.sound:
+                self.sound.play_sound("select")
+        elif self.selected_index == 4:
+            if self.sound:
+                self.sound.play_sound("select")
             self.next_screen = "exit"
             self.running = False
 
@@ -335,9 +365,14 @@ class MenuScreen(Screen):
             y = sy(250) + i * sy(70)
             color = "fg" if i == self.selected_index else "fg_dim"
             prefix = "▶ " if i == self.selected_index else "  "
+            
+            display_text = prefix + option
+            if option == "Sound":
+                display_text = prefix + f"Sound: {'ON' if self.sound_enabled else 'OFF'}"
+            
             draw_text(
                 self.screen,
-                prefix + option,
+                display_text,
                 SCREEN_WIDTH // 2,
                 y,
                 color,
@@ -348,7 +383,7 @@ class MenuScreen(Screen):
 
         draw_text(
             self.screen,
-            "Navigate (▼▲) |Select (Enter)| Fullscreen (F) | Quit (Q)",
+            "Navigate (▼▲) | Select (Enter) | Fullscreen (F) | Quit (Q)",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -358,8 +393,8 @@ class MenuScreen(Screen):
 
 
 class SetupScreen(Screen):
-    def __init__(self, screen: pygame.Surface):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.state = "questions"
         self.input_text = ""
         self.selected_index = 0
@@ -371,6 +406,8 @@ class SetupScreen(Screen):
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.next_screen = "menu"
                 self.running = False
 
@@ -378,6 +415,8 @@ class SetupScreen(Screen):
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     if self.input_text.isdigit() and int(self.input_text) > 0:
                         self.questions = int(self.input_text)
+                        if self.sound:
+                            self.sound.play_sound("select")
                         self.state = "mode"
                         self.input_text = ""
                 elif event.key == pygame.K_BACKSPACE:
@@ -388,9 +427,15 @@ class SetupScreen(Screen):
             elif self.state == "mode":
                 if event.key == pygame.K_UP or event.key == pygame.K_w:
                     self.selected_index = (self.selected_index - 1) % 2
+                    if self.sound:
+                        self.sound.play_sound("select")
                 elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     self.selected_index = (self.selected_index + 1) % 2
+                    if self.sound:
+                        self.sound.play_sound("select")
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    if self.sound:
+                        self.sound.play_sound("select")
                     self.mode = "solve_mode" if self.selected_index == 0 else "x_mode"
                     self.state = "operation"
                     self.selected_index = 0
@@ -398,9 +443,15 @@ class SetupScreen(Screen):
             elif self.state == "operation":
                 if event.key == pygame.K_UP or event.key == pygame.K_w:
                     self.selected_index = (self.selected_index - 1) % 4
+                    if self.sound:
+                        self.sound.play_sound("select")
                 elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     self.selected_index = (self.selected_index + 1) % 4
+                    if self.sound:
+                        self.sound.play_sound("select")
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    if self.sound:
+                        self.sound.play_sound("select")
                     ops = ["addition", "subtraction", "multiplication", "division"]
                     self.operation = ops[self.selected_index]
                     self.state = "level"
@@ -409,9 +460,15 @@ class SetupScreen(Screen):
             elif self.state == "level":
                 if event.key == pygame.K_UP or event.key == pygame.K_w:
                     self.selected_index = (self.selected_index - 1) % 3
+                    if self.sound:
+                        self.sound.play_sound("select")
                 elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     self.selected_index = (self.selected_index + 1) % 3
+                    if self.sound:
+                        self.sound.play_sound("select")
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    if self.sound:
+                        self.sound.play_sound("select")
                     self.level = self.selected_index + 1
                     self.next_screen = "game"
                     self.running = False
@@ -548,8 +605,8 @@ class SetupScreen(Screen):
 
 
 class GameScreen(Screen):
-    def __init__(self, screen: pygame.Surface, config: dict):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, config: dict, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.config = config
         self.total = config["questions"]
         self.mode = config["mode"]
@@ -559,7 +616,7 @@ class GameScreen(Screen):
         self.current_question = 0
         self.score = 0
         self.input_text = ""
-        self.tries = 0  # Track number of tries for current question
+        self.tries = 0
 
         self.problem = self.generate_problem()
         self.feedback = None
@@ -634,6 +691,8 @@ class GameScreen(Screen):
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.next_screen = "menu"
                 self.running = False
 
@@ -662,6 +721,8 @@ class GameScreen(Screen):
                 self.particles.emit_burst(
                     SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + sy(50), 30
                 )
+                if self.sound:
+                    self.sound.play_sound("correct")
                 self.feedback = "correct"
                 self.show_answer = True
                 self.tries = 0
@@ -669,6 +730,8 @@ class GameScreen(Screen):
                 self.tries += 1
                 self.shake = ScreenShake(8, 15)
                 self.flash = FlashEffect("red", 15)
+                if self.sound:
+                    self.sound.play_sound("wrong")
 
                 if self.tries >= 3:
                     self.feedback = "wrong"
@@ -869,8 +932,8 @@ class GameScreen(Screen):
 
 
 class ResultsScreen(Screen):
-    def __init__(self, screen: pygame.Surface, game_result: dict):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, game_result: dict, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.score = game_result["score"]
         self.total = game_result["total"]
         self.percentage = (self.score / self.total) * 100 if self.total > 0 else 0
@@ -882,6 +945,8 @@ class ResultsScreen(Screen):
         if self.is_perfect:
             for _ in range(5):
                 self.particles.emit_confetti(SCREEN_WIDTH // 2, 0, 30)
+            if self.sound:
+                self.sound.play_sound("perfect")
 
         self.show_confetti = self.is_perfect
         self.options = ["Play Again", "Menu", "Stats"]
@@ -890,13 +955,21 @@ class ResultsScreen(Screen):
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.next_screen = "menu"
                 self.running = False
             elif event.key == pygame.K_UP or event.key == pygame.K_w:
                 self.selected_index = (self.selected_index - 1) % len(self.options)
+                if self.sound:
+                    self.sound.play_sound("select")
             elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 self.selected_index = (self.selected_index + 1) % len(self.options)
+                if self.sound:
+                    self.sound.play_sound("select")
             elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                if self.sound:
+                    self.sound.play_sound("select")
                 if self.selected_index == 0:
                     self.next_screen = "setup"
                 elif self.selected_index == 1:
@@ -989,8 +1062,8 @@ class ResultsScreen(Screen):
 
 
 class StatsScreen(Screen):
-    def __init__(self, screen: pygame.Surface):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.period = "all"
         self.period_options = ["today", "week", "all"]
         self.period_labels = {"today": "Today", "week": "This Week", "all": "All Time"}
@@ -1002,17 +1075,23 @@ class StatsScreen(Screen):
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.next_screen = "menu"
                 self.running = False
             elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
                 self.selected_period_index = (self.selected_period_index - 1) % len(
                     self.period_options
                 )
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.update_period()
             elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 self.selected_period_index = (self.selected_period_index + 1) % len(
                     self.period_options
                 )
+                if self.sound:
+                    self.sound.play_sound("select")
                 self.update_period()
 
     def update_period(self):
@@ -1212,8 +1291,8 @@ class StatsScreen(Screen):
 
 
 class ExitScreen(Screen):
-    def __init__(self, screen: pygame.Surface):
-        super().__init__(screen)
+    def __init__(self, screen: pygame.Surface, sound_manager=None):
+        super().__init__(screen, sound_manager)
         self.frame = 0
         self.duration = 120
         self.floating_symbols: List[FloatingSymbol] = []

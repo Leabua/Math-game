@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 import pygame
 
-# Initialize pygame and paths before other local imports
 pygame.init()
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -24,7 +23,8 @@ from screens import (
     StatsScreen,
     ExitScreen,
 )
-from stats_manager import existing_stats, get_stats_summary
+from stats_manager import existing_stats, get_stats_summary, save_stats
+from sound_manager import SoundManager
 
 
 def main():
@@ -32,14 +32,17 @@ def main():
     if "theme" in stats:
         set_theme(stats["theme"])
 
-    # Use SCALED for automatic scaling while keeping high internal resolution
+    sound_manager = SoundManager()
+    if "sound_enabled" in stats:
+        sound_manager.set_enabled(stats["sound_enabled"])
+
     flags = pygame.SCALED | pygame.RESIZABLE
     screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
     pygame.display.set_caption("πMath")
 
     clock = pygame.time.Clock()
 
-    screen = OpeningScreen(screen_surface)
+    screen = OpeningScreen(screen_surface, sound_manager)
 
     game_config = {}
     game_result = {}
@@ -60,7 +63,7 @@ def main():
                         )
                     else:
                         pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
-                
+
                 if event.key == pygame.K_q:
                     running = False
 
@@ -83,8 +86,16 @@ def main():
                 set_theme(screen.selected_theme)
                 stats = existing_stats()
                 stats["theme"] = screen.selected_theme
-                from stats_manager import save_stats
                 save_stats(stats)
+
+            if isinstance(screen, MenuScreen):
+                if hasattr(screen, "sound_toggle_changed"):
+                    if screen.sound_toggle_changed:
+                        sound_manager.set_enabled(screen.sound_enabled)
+                        stats = existing_stats()
+                        stats["sound_enabled"] = screen.sound_enabled
+                        save_stats(stats)
+                        screen.sound_toggle_changed = False
 
             if isinstance(screen, SetupScreen):
                 if next_screen == "game":
@@ -96,15 +107,16 @@ def main():
                     }
 
             if next_screen == "theme":
-                screen = ThemeScreen(pygame.display.get_surface())
+                screen = ThemeScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen == "opening":
-                screen = OpeningScreen(pygame.display.get_surface())
+                screen = OpeningScreen(pygame.display.get_surface(), sound_manager)
+                sound_manager.start_music()
             elif next_screen == "menu":
-                screen = MenuScreen(pygame.display.get_surface())
+                screen = MenuScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen == "setup":
-                screen = SetupScreen(pygame.display.get_surface())
+                screen = SetupScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen == "game":
-                screen = GameScreen(pygame.display.get_surface(), game_config)
+                screen = GameScreen(pygame.display.get_surface(), game_config, sound_manager)
             elif next_screen == "results":
                 stats = existing_stats()
                 summary = get_stats_summary(stats)
@@ -114,12 +126,13 @@ def main():
                     "current_streak": stats["current_streak"],
                     "best_streak": stats["best_streak"],
                 }
-                screen = ResultsScreen(pygame.display.get_surface(), game_result)
+                screen = ResultsScreen(pygame.display.get_surface(), game_result, sound_manager)
             elif next_screen == "stats":
-                screen = StatsScreen(pygame.display.get_surface())
+                screen = StatsScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen == "exit":
-                screen = ExitScreen(pygame.display.get_surface())
+                screen = ExitScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen is None:
+                sound_manager.stop_music()
                 running = False
 
     pygame.quit()

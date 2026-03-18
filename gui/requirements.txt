@@ -6,3 +6,6 @@ pygame-ce>=2.5.0
 
 # Install pygame-chart second - it will try to install pygame as dependency but we'll ignore it
 pygame-chart>=1.0.0
+
+# Required for sound generation
+numpy>=1.20.0
