@@ -116,7 +116,9 @@ def main():
             elif next_screen == "setup":
                 screen = SetupScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen == "game":
-                screen = GameScreen(pygame.display.get_surface(), game_config, sound_manager)
+                screen = GameScreen(
+                    pygame.display.get_surface(), game_config, sound_manager
+                )
             elif next_screen == "results":
                 stats = existing_stats()
                 summary = get_stats_summary(stats)
@@ -126,7 +128,9 @@ def main():
                     "current_streak": stats["current_streak"],
                     "best_streak": stats["best_streak"],
                 }
-                screen = ResultsScreen(pygame.display.get_surface(), game_result, sound_manager)
+                screen = ResultsScreen(
+                    pygame.display.get_surface(), game_result, sound_manager
+                )
             elif next_screen == "stats":
                 screen = StatsScreen(pygame.display.get_surface(), sound_manager)
             elif next_screen == "exit":
