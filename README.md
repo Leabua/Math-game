@@ -1,6 +1,6 @@
 # Math Game
 
-![Demo](assets/GUI.png)
+![Demo](assets/gui.png)
 ![Demo](assets/level.png)
 
 Game works in the terminal too.
