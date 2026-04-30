@@ -1163,6 +1163,8 @@ class StatsScreen(Screen):
         self.stats = existing_stats()
         self.summary = get_stats_summary(self.stats)
         self.chart_data = get_chart_data(self.stats, self.period)
+        self.timer = 0
+        self.period_transition = 0
 
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
@@ -1175,6 +1177,218 @@ class StatsScreen(Screen):
                 self.selected_period_index = (self.selected_period_index - 1) % len(
                     self.period_options
                 )
+                if self.sound:
+                    self.sound.play_sound("select")
+                self.period_transition = 20
+                self.update_period()
+            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.selected_period_index = (self.selected_period_index + 1) % len(
+                    self.period_options
+                )
+                if self.sound:
+                    self.sound.play_sound("select")
+                self.period_transition = 20
+                self.update_period()
+
+    def update_period(self):
+        self.period = self.period_options[self.selected_period_index]
+        self.chart_data = get_chart_data(self.stats, self.period)
+
+    def update(self):
+        self.timer += 1
+        if self.period_transition > 0:
+            self.period_transition -= 1
+        self.stats = existing_stats()
+        self.summary = get_stats_summary(self.stats)
+        self.chart_data = get_chart_data(self.stats, self.period)
+
+    def draw(self):
+        self.screen.fill(COLORS["bg"])
+
+        alpha = max(100, 255 - self.period_transition * 12)
+
+        title_pulse = sy(2) * math.sin(self.timer * 0.04)
+        draw_text(
+            self.screen,
+            "Statistics",
+            SCREEN_WIDTH // 2,
+            sy(35) + title_pulse,
+            "fg",
+            32,
+            center=True,
+            bold=True,
+        )
+
+        tab_width = sx(140)
+        tab_height = sy(36)
+        tab_y = sy(68)
+        tab_spacing = sx(155)
+        tab_start_x = SCREEN_WIDTH // 2 - (len(self.period_options) - 1) * tab_spacing // 2
+
+        for i, period in enumerate(self.period_options):
+            x = tab_start_x + i * tab_spacing
+            is_selected = i == self.selected_period_index
+            color = "fg" if is_selected else "fg_dim"
+
+            bg_surf = pygame.Surface((tab_width, tab_height), pygame.SRCALPHA)
+            if is_selected:
+                bg_color_t = (*COLORS["fg"][:3], 35)
+            else:
+                bg_color_t = (*COLORS["fg"][:3], 15)
+            pygame.draw.rect(bg_surf, bg_color_t, (0, 0, tab_width, tab_height), border_radius=8)
+            self.screen.blit(bg_surf, (x - tab_width // 2, tab_y - tab_height // 2))
+
+            draw_text(
+                self.screen,
+                self.period_labels[period],
+                x,
+                tab_y,
+                color,
+                20,
+                center=True,
+                bold=is_selected,
+            )
+
+        y_offset = sy(120)
+        card_w = sx(260)
+        card_h = sy(42)
+        card_gap = sy(12)
+        card_x = sx(70)
+
+        stat_items = [
+            ("Games Played", str(self.summary["games_played"]), "fg"),
+            ("Total Questions", str(self.summary["total_questions"]), "fg"),
+            ("Accuracy", f"{self.summary['overall_accuracy']:.1f}%", "aqua"),
+            ("Best Score", f"{self.summary['best_score_percent']:.1f}%", "yellow"),
+            ("Best Streak", str(self.summary["best_streak"]), "orange"),
+        ]
+
+        for idx, (label, value, val_color) in enumerate(stat_items):
+            y = y_offset + idx * (card_h + card_gap)
+
+            card_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
+            card_bg = (*COLORS["bg_dark"][:3], 120)
+            pygame.draw.rect(card_surf, card_bg, (0, 0, card_w, card_h), border_radius=10)
+            border_color_t = (*COLORS["fg_dim"][:3], 60)
+            pygame.draw.rect(card_surf, border_color_t, (0, 0, card_w, card_h), 1, border_radius=10)
+            self.screen.blit(card_surf, (card_x, y))
+
+            draw_text(self.screen, label, card_x + sx(15), y + card_h // 2, "fg_dim", 16, center=False)
+
+            val_font = get_font(20, bold=True)
+            val_surf = val_font.render(value, True, COLORS[val_color])
+            val_surf.set_alpha(alpha)
+            val_rect = val_surf.get_rect(center=(card_x + card_w - sx(50), y + card_h // 2))
+            self.screen.blit(val_surf, val_rect)
+
+        chart_x, chart_y = sx(370), sy(120)
+        chart_w, chart_h = sx(400), sy(180)
+
+        if CHART_AVAILABLE and self.chart_data["sessions"]:
+            draw_box(
+                self.screen, chart_x, chart_y, chart_w, chart_h, "bg_dark", "fg_dim", 1
+            )
+
+            try:
+                if CHART_AVAILABLE:
+                    chart_settings.TEXT_COLOR = COLORS["fg"]
+                    chart_settings.GRID_COLOR = COLORS["fg_dim"]
+                    chart_settings.TITLE_FONT_SIZE = 14
+
+                fig = pygame_chart.Figure(
+                    self.screen,
+                    chart_x,
+                    chart_y,
+                    chart_w,
+                    chart_h,
+                    bg_color=COLORS["bg_dark"],
+                )
+
+                if len(self.chart_data["sessions"]) > 0:
+                    fig.line(
+                        "accuracy",
+                        self.chart_data["sessions"],
+                        self.chart_data["accuracy"],
+                        color=COLORS["aqua"],
+                    )
+
+                fig.set_ylim((0, 100))
+
+                if len(self.chart_data["sessions"]) == 1:
+                    fig.set_xlim((0, 2))
+
+                fig.add_title("Accuracy %")
+                fig.add_xaxis_label("Session")
+                fig.add_yaxis_label("%")
+                fig.add_gridlines()
+                fig.draw()
+                self.screen.blit(fig.background, (chart_x, chart_y))
+            except Exception as e:
+                print(f"Chart Error: {e}")
+                draw_text(
+                    self.screen,
+                    "Chart unavailable",
+                    chart_x + chart_w // 2,
+                    chart_y + chart_h // 2,
+                    "fg_dim",
+                    16,
+                    center=True,
+                )
+        else:
+            draw_text(
+                self.screen,
+                "No data for this period",
+                SCREEN_WIDTH // 2,
+                sy(250),
+                "fg_dim",
+                20,
+                center=True,
+            )
+
+        if CHART_AVAILABLE and self.chart_data["sessions"]:
+            bar_x, bar_y = sx(70), sy(350)
+            bar_w, bar_h = sx(350), sy(150)
+            draw_box(self.screen, bar_x, bar_y, bar_w, bar_h, "bg_dark", "fg_dim", 1)
+
+            try:
+                fig2 = pygame_chart.Figure(
+                    self.screen,
+                    bar_x,
+                    bar_y,
+                    bar_w,
+                    bar_h,
+                    bg_color=COLORS["bg_dark"],
+                )
+
+                fig2.bar(
+                    "questions",
+                    self.chart_data["sessions"],
+                    self.chart_data["questions"],
+                    color=COLORS["blue"],
+                )
+
+                max_q = max(self.chart_data["questions"]) if self.chart_data["questions"] else 0
+                fig2.set_ylim((0, max(1, max_q + 1)))
+
+                if len(self.chart_data["sessions"]) == 1:
+                    fig2.set_xlim((0, 2))
+
+                fig2.add_title("Questions per Session")
+                fig2.add_gridlines()
+                fig2.draw()
+                self.screen.blit(fig2.background, (bar_x, bar_y))
+            except:
+                pass
+
+        draw_text(
+            self.screen,
+            "\u2190 \u2192 to change period | ESC to go back | F for Fullscreen | Q to Quit",
+            SCREEN_WIDTH // 2,
+            SCREEN_HEIGHT - sy(40),
+            "fg_dim",
+            16,
+            center=True,
+        )
                 if self.sound:
                     self.sound.play_sound("select")
                 self.update_period()
@@ -1386,26 +1600,28 @@ class ExitScreen(Screen):
     def __init__(self, screen: pygame.Surface, sound_manager=None):
         super().__init__(screen, sound_manager)
         self.frame = 0
-        self.duration = 120
+        self.duration = 150
         self.floating_symbols: List[FloatingSymbol] = []
         self.alpha = 255
 
     def update(self):
         self.frame += 1
 
-        if random.randint(0, 10) == 0:
+        if random.randint(0, 12) == 0:
             symbol = random.choice(SYMBOLS)
             x = random.randint(sx(50), SCREEN_WIDTH - sx(50))
             y = SCREEN_HEIGHT + sy(30)
-            speed = random.uniform(-sy(2), -sy(0.5))
-            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim"))
+            layer = random.randint(0, 2)
+            speed = random.uniform(-sy(1.5), -sy(0.3))
+            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim", layer=layer))
 
         self.floating_symbols = [
             s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
         ]
 
-        if self.frame > self.duration - 30:
-            self.alpha = max(0, self.alpha - 10)
+        if self.frame > self.duration - 45:
+            t = (self.frame - (self.duration - 45)) / 45
+            self.alpha = int(255 * (1 - ease_out_cubic(t)))
 
         if self.frame >= self.duration:
             self.running = False
