@@ -43,14 +43,14 @@ def update_stats(stats, score, total):
     stats["total_questions"] += total
     stats["correct_answers"] += score
 
-    # Calculate percentage
+    if total <= 0:
+        return stats
+
     percentage = (score / total) * 100
 
-    # Update best score
     if percentage > stats["best_score_percent"]:
         stats["best_score_percent"] = percentage
 
-    # Update streak (perfect score = 100%)
     if percentage == 100:
         stats["current_streak"] += 1
         if stats["current_streak"] > stats["best_streak"]:
@@ -64,6 +64,9 @@ def update_stats(stats, score, total):
 def display_stats(stats):
     """Display overall stats"""
     if stats["games_played"] == 0:
+        return
+
+    if stats["total_questions"] == 0:
         return
 
     overall_accuracy = (stats["correct_answers"] / stats["total_questions"]) * 100
