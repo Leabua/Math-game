@@ -1,8 +1,7 @@
 import pygame
 import random
 import math
-from typing import Optional, Callable, List, Tuple
-from datetime import datetime
+from typing import Optional, List
 
 from renderer import (
     SCREEN_WIDTH,
@@ -25,10 +24,8 @@ from animations import (
     FloatingSymbol,
     ScreenShake,
     FlashEffect,
-    TransitionFade,
     ease_in_out_cubic,
     ease_out_cubic,
-    ease_out_quad,
 )
 from stats_manager import (
     existing_stats,
