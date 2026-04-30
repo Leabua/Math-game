@@ -141,10 +141,11 @@ def main():
                     if next_screen == "opening":
                         sound_manager.start_music()
                 else:
+                    pygame.event.clear()
                     transition = TransitionFade(12, "out")
-                    while transition and not transition.is_done():
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
+                    while not transition.is_done():
+                        for ev in pygame.event.get():
+                            if ev.type == pygame.QUIT:
                                 running = False
                         screen.draw()
                         transition.draw(pygame.display.get_surface())
