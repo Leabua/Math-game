@@ -440,7 +440,8 @@ class SetupScreen(Screen):
             if self.state == "questions":
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     if self.input_text.isdigit() and int(self.input_text) > 0:
-                        self.questions = int(self.input_text)
+                        value = int(self.input_text)
+                        self.questions = min(value, 999)
                         if self.sound:
                             self.sound.play_sound("select")
                         self.state = "mode"
@@ -706,20 +707,21 @@ class GameScreen(Screen):
 
         elif self.operation == "division":
             factor = generate_integer(max(1, self.level - 1))
-            dividend = y * factor
+            divisor = max(1, y)
+            dividend = divisor * factor
             if self.mode == "solve_mode":
                 return {
                     "x": dividend,
-                    "y": y,
+                    "y": divisor,
                     "answer": factor,
-                    "display": f"{dividend} ÷ {y} = ?",
+                    "display": f"{dividend} ÷ {divisor} = ?",
                 }
             else:
                 return {
                     "x": dividend,
-                    "y": y,
+                    "y": divisor,
                     "answer": factor,
-                    "display": f"[x] ÷ {y} = {factor}.\nx = ?",
+                    "display": f"[x] ÷ {divisor} = {factor}.\nx = ?",
                 }
 
         return {"x": x, "y": y, "answer": x + y, "display": f"{x} + {y} = ?"}
@@ -929,28 +931,16 @@ class GameScreen(Screen):
                     bold=True,
                 )
             else:
-                if self.operation == "primes":
-                    draw_text(
-                        self.screen,
-                        f"Answer: {self.correct_answer}",
-                        SCREEN_WIDTH // 2,
-                        input_bg_y + sy(30),
-                        "red",
-                        28,
-                        center=True,
-                        bold=True,
-                    )
-                else:
-                    draw_text(
-                        self.screen,
-                        f"Answer: {self.correct_answer}",
-                        SCREEN_WIDTH // 2,
-                        input_bg_y + sy(30),
-                        "red",
-                        28,
-                        center=True,
-                        bold=True,
-                    )
+                draw_text(
+                    self.screen,
+                    f"Answer: {self.correct_answer}",
+                    SCREEN_WIDTH // 2,
+                    input_bg_y + sy(30),
+                    "red",
+                    28,
+                    center=True,
+                    bold=True,
+                )
                 draw_text(
                     self.screen,
                     "Press Enter to continue",
@@ -1028,7 +1018,7 @@ class ResultsScreen(Screen):
         super().__init__(screen, sound_manager)
         self.score = game_result["score"]
         self.total = game_result["total"]
-        self.percentage = (self.score / self.total) * 100 if self.total > 0 else 0
+        self.percentage = round((self.score / self.total) * 100, 1) if self.total > 0 else 0
         self.is_perfect = self.percentage == 100
         self.current_streak = game_result.get("current_streak", 0)
         self.best_streak = game_result.get("best_streak", 0)
@@ -1075,7 +1065,6 @@ class ResultsScreen(Screen):
             if random.randint(0, 3) == 0:
                 self.particles.emit_confetti(random.randint(0, SCREEN_WIDTH), -20, 5)
             self.particles.update()
-            self.particles.draw(self.screen)
 
     def draw(self):
         self.screen.fill(COLORS["bg"])
@@ -1383,211 +1372,6 @@ class StatsScreen(Screen):
         draw_text(
             self.screen,
             "\u2190 \u2192 to change period | ESC to go back | F for Fullscreen | Q to Quit",
-            SCREEN_WIDTH // 2,
-            SCREEN_HEIGHT - sy(40),
-            "fg_dim",
-            16,
-            center=True,
-        )
-                if self.sound:
-                    self.sound.play_sound("select")
-                self.update_period()
-            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                self.selected_period_index = (self.selected_period_index + 1) % len(
-                    self.period_options
-                )
-                if self.sound:
-                    self.sound.play_sound("select")
-                self.update_period()
-
-    def update_period(self):
-        self.period = self.period_options[self.selected_period_index]
-        self.chart_data = get_chart_data(self.stats, self.period)
-
-    def update(self):
-        self.stats = existing_stats()
-        self.summary = get_stats_summary(self.stats)
-        self.chart_data = get_chart_data(self.stats, self.period)
-
-    def draw(self):
-        self.screen.fill(COLORS["bg"])
-
-        draw_text(
-            self.screen,
-            "Statistics",
-            SCREEN_WIDTH // 2,
-            30,
-            "fg",
-            32,
-            center=True,
-            bold=True,
-        )
-
-        for i, period in enumerate(self.period_options):
-            x = sx(200) + i * sx(150)
-            color = "fg" if i == self.selected_period_index else "fg_dim"
-            draw_text(
-                self.screen,
-                self.period_labels[period],
-                x,
-                sy(75),
-                color,
-                18,
-                center=True,
-                bold=(i == self.selected_period_index),
-            )
-
-        y_offset = sy(120)
-
-        draw_text(
-            self.screen,
-            f"Games Played: {self.summary['games_played']}",
-            sx(80),
-            y_offset,
-            "fg",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Total Questions: {self.summary['total_questions']}",
-            sx(80),
-            y_offset + sy(30),
-            "fg",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Accuracy: {self.summary['overall_accuracy']:.1f}%",
-            sx(80),
-            y_offset + sy(60),
-            "aqua",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Best Score: {self.summary['best_score_percent']:.1f}%",
-            sx(80),
-            y_offset + sy(90),
-            "yellow",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Best Streak: {self.summary['best_streak']}",
-            sx(80),
-            y_offset + sy(120),
-            "orange",
-            20,
-        )
-
-        if CHART_AVAILABLE and self.chart_data["sessions"]:
-            chart_x, chart_y = sx(380), sy(120)
-            chart_w, chart_h = sx(380), sy(200)
-
-            draw_box(
-                self.screen, chart_x, chart_y, chart_w, chart_h, "bg_dark", "fg_dim", 1
-            )
-
-            try:
-                if CHART_AVAILABLE:
-                    chart_settings.TEXT_COLOR = COLORS["fg"]
-                    chart_settings.GRID_COLOR = COLORS["fg_dim"]
-                    chart_settings.TITLE_FONT_SIZE = 14
-
-                fig = pygame_chart.Figure(
-                    self.screen,
-                    chart_x,
-                    chart_y,
-                    chart_w,
-                    chart_h,
-                    bg_color=COLORS["bg_dark"],
-                )
-
-                if len(self.chart_data["sessions"]) > 0:
-                    fig.line(
-                        "accuracy",
-                        self.chart_data["sessions"],
-                        self.chart_data["accuracy"],
-                        color=COLORS["aqua"],
-                    )
-                
-                # Ensure y-range > 0 to avoid crash if all values are identical
-                fig.set_ylim((0, 100))
-
-                # Ensure x-range > 0 to avoid crash if there is only one data point
-                if len(self.chart_data["sessions"]) == 1:
-                    fig.set_xlim((0, 2))
-
-                fig.add_title("Accuracy %")
-                fig.add_xaxis_label("Session")
-                fig.add_yaxis_label("%")
-                fig.add_gridlines()
-                fig.draw()
-                # Hack: Library blits background too early (before elements are drawn on it)
-                self.screen.blit(fig.background, (chart_x, chart_y))
-            except Exception as e:
-                print(f"Chart Error: {e}")
-                draw_text(
-                    self.screen,
-                    "Chart unavailable",
-                    chart_x + chart_w // 2,
-                    chart_y + chart_h // 2,
-                    "fg_dim",
-                    16,
-                    center=True,
-                )
-        else:
-            draw_text(
-                self.screen,
-                "No data for this period",
-                SCREEN_WIDTH // 2,
-                sy(250),
-                "fg_dim",
-                20,
-                center=True,
-            )
-
-        if CHART_AVAILABLE and self.chart_data["sessions"]:
-            bar_x, bar_y = sx(80), sy(350)
-            bar_w, bar_h = sx(300), sy(150)
-            draw_box(self.screen, bar_x, bar_y, bar_w, bar_h, "bg_dark", "fg_dim", 1)
-
-            try:
-                fig2 = pygame_chart.Figure(
-                    self.screen,
-                    bar_x,
-                    bar_y,
-                    bar_w,
-                    bar_h,
-                    bg_color=COLORS["bg_dark"],
-                )
-
-                fig2.bar(
-                    "questions",
-                    self.chart_data["sessions"],
-                    self.chart_data["questions"],
-                    color=COLORS["blue"],
-                )
-
-                # Ensure y-range > 0 to avoid crash if all values are identical
-                max_q = max(self.chart_data["questions"]) if self.chart_data["questions"] else 0
-                fig2.set_ylim((0, max(1, max_q + 1)))
-
-                # Ensure x-range > 0 to avoid crash if there is only one data point
-                if len(self.chart_data["sessions"]) == 1:
-                    fig2.set_xlim((0, 2))
-
-                fig2.add_title("Questions per Session")
-                fig2.add_gridlines()
-                fig2.draw()
-                # Hack: Library blits background too early
-                self.screen.blit(fig2.background, (bar_x, bar_y))
-            except:
-                pass
-
-        draw_text(
-            self.screen,
-            "← → to change period | ESC to go back | F for Fullscreen | Q to Quit",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
