@@ -25,6 +25,10 @@ from animations import (
     FloatingSymbol,
     ScreenShake,
     FlashEffect,
+    TransitionFade,
+    ease_in_out_cubic,
+    ease_out_cubic,
+    ease_out_quad,
 )
 from stats_manager import (
     existing_stats,
@@ -43,7 +47,7 @@ try:
 except ImportError:
     CHART_AVAILABLE = False
 
-SYMBOLS = ["+", "-", "×", "÷", "=", "?"]
+SYMBOLS = ["+", "-", "×", "÷", "=", "?", "π", "√", "∞", "∑", "ℙ", "Δ"]
 
 DIFFICULTY_LEVELS = {
     1: "Easy",
@@ -63,8 +67,6 @@ OPERATIONS = {
     "4": "division",
     "5": "primes",
 }
-
-SYMBOLS = ["+", "-", "×", "÷", "=", "?"]
 
 
 class Screen:
