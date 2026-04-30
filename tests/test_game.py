@@ -11,6 +11,7 @@ from utilities.math_stats import (
     create_stats,
     update_stats,
 )
+from utilities.primes import is_prime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -183,6 +184,51 @@ class TestDivision:
 
         score = division("solve_mode", 1, 1)
         assert score == 0
+
+
+class TestPrimes:
+    def test_is_prime_0_and_1(self):
+        assert is_prime(0) is False
+        assert is_prime(1) is False
+
+    def test_is_prime_2_and_3(self):
+        assert is_prime(2) is True
+        assert is_prime(3) is True
+
+    def test_is_prime_multiples_of_2_and_3(self):
+        assert is_prime(4) is False
+        assert is_prime(6) is False
+        assert is_prime(8) is False
+        assert is_prime(9) is False
+        assert is_prime(10) is False
+        assert is_prime(12) is False
+
+    def test_is_prime_small_primes(self):
+        assert is_prime(5) is True
+        assert is_prime(7) is True
+        assert is_prime(11) is True
+        assert is_prime(13) is True
+        assert is_prime(17) is True
+        assert is_prime(19) is True
+        assert is_prime(23) is True
+        assert is_prime(29) is True
+
+    def test_is_prime_larger_primes(self):
+        assert is_prime(97) is True
+        assert is_prime(101) is True
+        assert is_prime(541) is True
+        assert is_prime(7919) is True
+
+    def test_is_prime_composites(self):
+        assert is_prime(100) is False
+        assert is_prime(121) is False
+        assert is_prime(999) is False
+        assert is_prime(1000) is False
+
+    def test_is_prime_negative(self):
+        assert is_prime(-1) is False
+        assert is_prime(-5) is False
+        assert is_prime(-100) is False
 
 
 if __name__ == "__main__":

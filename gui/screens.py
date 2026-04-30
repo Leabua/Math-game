@@ -61,6 +61,7 @@ OPERATIONS = {
     "2": "subtraction",
     "3": "multiplication",
     "4": "division",
+    "5": "primes",
 }
 
 SYMBOLS = ["+", "-", "×", "÷", "=", "?"]
@@ -442,17 +443,17 @@ class SetupScreen(Screen):
 
             elif self.state == "operation":
                 if event.key == pygame.K_UP or event.key == pygame.K_w:
-                    self.selected_index = (self.selected_index - 1) % 4
+                    self.selected_index = (self.selected_index - 1) % 5
                     if self.sound:
                         self.sound.play_sound("select")
                 elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                    self.selected_index = (self.selected_index + 1) % 4
+                    self.selected_index = (self.selected_index + 1) % 5
                     if self.sound:
                         self.sound.play_sound("select")
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     if self.sound:
                         self.sound.play_sound("select")
-                    ops = ["addition", "subtraction", "multiplication", "division"]
+                    ops = ["addition", "subtraction", "multiplication", "division", "primes"]
                     self.operation = ops[self.selected_index]
                     self.state = "level"
                     self.selected_index = 0
@@ -550,6 +551,7 @@ class SetupScreen(Screen):
                 "Subtraction (-)",
                 "Multiplication (×)",
                 "Division (÷)",
+                "Primes (ℙ)",
             ]
             for i, op in enumerate(ops):
                 color = "fg" if i == self.selected_index else "fg_dim"
@@ -631,6 +633,16 @@ class GameScreen(Screen):
 
     def generate_problem(self) -> dict:
         from utilities.game_logic import generate_integer
+        from utilities.primes import is_prime
+
+        if self.operation == "primes":
+            num = generate_integer(self.level)
+            correct = is_prime(num)
+            return {
+                "number": num,
+                "answer": correct,
+                "display": f"Is {num} a prime number?",
+            }
 
         x, y = generate_integer(self.level), generate_integer(self.level)
 
@@ -667,7 +679,6 @@ class GameScreen(Screen):
                     "display": f"[x] × {y} = {x * y}.\nx = ?",
                 }
 
-            # need to work on the division logic here
         elif self.operation == "division":
             factor = generate_integer(max(1, self.level - 1))
             dividend = y * factor
@@ -701,6 +712,15 @@ class GameScreen(Screen):
                     self.next_question()
                 return
 
+            if self.operation == "primes":
+                if event.key == pygame.K_y:
+                    self.input_text = "y"
+                    self.check_answer()
+                elif event.key == pygame.K_n:
+                    self.input_text = "n"
+                    self.check_answer()
+                return
+
             if event.key == pygame.K_BACKSPACE:
                 self.input_text = self.input_text[:-1]
             elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
@@ -712,6 +732,30 @@ class GameScreen(Screen):
 
     def check_answer(self):
         if not self.input_text:
+            return
+
+        if self.operation == "primes":
+            user_yes = self.input_text == "y"
+            correct = self.problem["answer"]
+            if user_yes == correct:
+                self.score += 1
+                self.particles.emit_burst(
+                    SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + sy(50), 30
+                )
+                if self.sound:
+                    self.sound.play_sound("correct")
+                self.feedback = "correct"
+            else:
+                self.tries += 1
+                self.shake = ScreenShake(8, 15)
+                self.flash = FlashEffect("red", 15)
+                if self.sound:
+                    self.sound.play_sound("wrong")
+                self.feedback = "wrong"
+                self.correct_answer = "Yes" if correct else "No"
+
+            self.show_answer = True
+            self.feedback_timer = 60
             return
 
         try:
@@ -844,7 +888,7 @@ class GameScreen(Screen):
             sy(60),
             "bg_dark",
             "fg_dim",
-            3,  # Updated to match new default
+            3,
         )
 
         if self.show_answer:
@@ -860,16 +904,28 @@ class GameScreen(Screen):
                     bold=True,
                 )
             else:
-                draw_text(
-                    self.screen,
-                    f"Answer: {self.correct_answer}",
-                    SCREEN_WIDTH // 2,
-                    input_bg_y + sy(30),
-                    "red",
-                    28,
-                    center=True,
-                    bold=True,
-                )
+                if self.operation == "primes":
+                    draw_text(
+                        self.screen,
+                        f"Answer: {self.correct_answer}",
+                        SCREEN_WIDTH // 2,
+                        input_bg_y + sy(30),
+                        "red",
+                        28,
+                        center=True,
+                        bold=True,
+                    )
+                else:
+                    draw_text(
+                        self.screen,
+                        f"Answer: {self.correct_answer}",
+                        SCREEN_WIDTH // 2,
+                        input_bg_y + sy(30),
+                        "red",
+                        28,
+                        center=True,
+                        bold=True,
+                    )
                 draw_text(
                     self.screen,
                     "Press Enter to continue",
@@ -880,28 +936,39 @@ class GameScreen(Screen):
                     center=True,
                 )
         else:
-            draw_text(
-                self.screen,
-                self.input_text + "_",
-                SCREEN_WIDTH // 2,
-                input_bg_y + sy(30),
-                "aqua",
-                36,
-                center=True,
-                bold=True,
-            )
-
-            # Show "Try again" or "Tries" indicator
-            if self.tries > 0:
+            if self.operation == "primes":
                 draw_text(
                     self.screen,
-                    f"Try again! ({self.tries}/3)",
+                    "Press Y for Yes, N for No",
                     SCREEN_WIDTH // 2,
-                    input_bg_y + sy(75),
-                    "orange",
-                    16,
+                    input_bg_y + sy(30),
+                    "aqua",
+                    28,
                     center=True,
+                    bold=True,
                 )
+            else:
+                draw_text(
+                    self.screen,
+                    self.input_text + "_",
+                    SCREEN_WIDTH // 2,
+                    input_bg_y + sy(30),
+                    "aqua",
+                    36,
+                    center=True,
+                    bold=True,
+                )
+
+                if self.tries > 0:
+                    draw_text(
+                        self.screen,
+                        f"Try again! ({self.tries}/3)",
+                        SCREEN_WIDTH // 2,
+                        input_bg_y + sy(75),
+                        "orange",
+                        16,
+                        center=True,
+                    )
 
         draw_text(
             self.screen,

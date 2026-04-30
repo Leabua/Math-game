@@ -8,6 +8,7 @@ from main_modes.add import add
 from main_modes.minus import minus
 from main_modes.multiplication import multiply
 from main_modes.divison import division
+from main_modes.primes import primes_game
 
 # utilities
 import utilities.math_stats as s
@@ -72,7 +73,7 @@ def sign(mode, total, level, name):
         try:
             sign = (
                 input(
-                    "\nWhat do you want to practice?\n 1. Addition (+),\n 2. Subtraction (-),\n 3. Multiplication (*),\n 4. Division (/)\nYour choice: "
+                    "\nWhat do you want to practice?\n 1. Addition (+),\n 2. Subtraction (-),\n 3. Multiplication (*),\n 4. Division (/)\n 5. Primes (ℙ)\nYour choice: "
                 )
                 .strip()
                 .lower()
@@ -88,8 +89,10 @@ def sign(mode, total, level, name):
                 return multiply(mode, total, level)
             elif sign in ["division", "÷", "/", "4"]:
                 return division(mode, total, level)
+            elif sign in ["primes", "p", "prime", "5"]:
+                return primes_game(total, level)
             else:
-                print("Please enter +, -, x or /")
+                print("Please enter +, -, x, / or p")
 
         except ValueError:
             print("Please enter +, -, x or /.")
