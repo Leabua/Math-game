@@ -240,13 +240,14 @@ class OpeningScreen(Screen):
         if self.frame > self.duration - 60:
             self.subtitle_alpha = max(0, self.subtitle_alpha - 5)
 
-        if self.frame % 30 == 0:
+        if self.frame % 25 == 0:
             symbol = random.choice(SYMBOLS)
             x = random.randint(sx(50), SCREEN_WIDTH - sx(50))
             y = -sy(30)
-            speed = random.uniform(sy(0.5), sy(2.0))
+            layer = random.randint(0, 2)
+            speed = random.uniform(sy(0.4), sy(1.2))
             color = random.choice(["fg_dim", "fg_dim", "fg_dim"])
-            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, color))
+            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, color, layer=layer))
 
         self.floating_symbols = [
             s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -266,8 +267,7 @@ class OpeningScreen(Screen):
 
         if self.frame > self.duration - 120:
             t = (self.frame - (self.duration - 120)) / 120
-            # Ease in-out quadratic
-            t = 2 * t * t if t < 0.5 else 1 - pow(-2 * t + 2, 2) / 2
+            t = ease_in_out_cubic(t)
             current_y = start_y + (end_y - start_y) * t
 
         title_font = get_font(72, bold=True)
@@ -300,6 +300,7 @@ class MenuScreen(Screen):
         self.floating_symbols: List[FloatingSymbol] = []
         self.sound_enabled = sound_manager.enabled if sound_manager else False
         self.sound_toggle_changed = False
+        self.menu_timer = 0
 
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
@@ -342,12 +343,15 @@ class MenuScreen(Screen):
             self.running = False
 
     def update(self):
+        self.menu_timer += 1
+
         if random.randint(0, 20) == 0:
             symbol = random.choice(SYMBOLS)
             x = random.randint(50, SCREEN_WIDTH - 50)
             y = random.randint(0, SCREEN_HEIGHT)
-            speed = random.uniform(0.3, 1.0) * random.choice([-1, 1])
-            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim"))
+            layer = random.randint(0, 2)
+            speed = random.uniform(0.2, 0.8) * random.choice([-1, 1])
+            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim", layer=layer))
 
         self.floating_symbols = [
             s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -360,28 +364,47 @@ class MenuScreen(Screen):
             symbol.draw(self.screen, get_font(28))
 
         title_font = get_font(64, bold=True)
+        title_pulse = sy(3) * math.sin(self.menu_timer * 0.03)
         title = title_font.render("πMath", True, COLORS["fg"])
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(120)))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(120) + title_pulse))
         self.screen.blit(title, title_rect)
 
         for i, option in enumerate(self.options):
             y = sy(250) + i * sy(70)
-            color = "fg" if i == self.selected_index else "fg_dim"
-            prefix = "▶ " if i == self.selected_index else "  "
-            
+            is_selected = i == self.selected_index
+            color = "fg" if is_selected else "fg_dim"
+
+            if is_selected:
+                pulse = sy(4) * math.sin(self.menu_timer * 0.08)
+                y += pulse
+                prefix = "▶ "
+            else:
+                prefix = "  "
+
             display_text = prefix + option
             if option == "Sound":
                 display_text = prefix + f"Sound: {'ON' if self.sound_enabled else 'OFF'}"
-            
+
+            size = 36 if is_selected else 32
+            bg_size = sx(280)
+            bg_h = sy(50)
+
+            if is_selected:
+                bg_alpha = int(60 + 30 * math.sin(self.menu_timer * 0.1))
+                bg_surf = pygame.Surface((bg_size, bg_h), pygame.SRCALPHA)
+                bg_color_t = (*COLORS["fg_dim"][:3], bg_alpha)
+                pygame.draw.rect(bg_surf, bg_color_t, (0, 0, bg_size, bg_h), border_radius=10)
+                self.screen.blit(bg_surf, (SCREEN_WIDTH // 2 - bg_size // 2, y - bg_h // 2))
+
             draw_text(
                 self.screen,
                 display_text,
                 SCREEN_WIDTH // 2,
                 y,
                 color,
-                32,
+                size,
                 center=True,
-                bold=(i == self.selected_index),
+                bold=is_selected,
             )
 
         draw_text(
