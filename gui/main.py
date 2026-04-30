@@ -25,6 +25,21 @@ from screens import (
 )
 from stats_manager import existing_stats, get_stats_summary, save_stats
 from sound_manager import SoundManager
+from animations import TransitionFade
+
+
+SCREEN_MAP = {
+    "theme": ThemeScreen,
+    "opening": OpeningScreen,
+    "menu": MenuScreen,
+    "setup": SetupScreen,
+    "game": GameScreen,
+    "results": ResultsScreen,
+    "stats": StatsScreen,
+    "exit": ExitScreen,
+}
+
+SKIP_FADE_SCREENS = {"opening", "exit", None}
 
 
 def main():
@@ -43,6 +58,7 @@ def main():
     clock = pygame.time.Clock()
 
     screen = OpeningScreen(screen_surface, sound_manager)
+    transition = None
 
     game_config = {}
     game_result = {}
@@ -76,10 +92,13 @@ def main():
         if hasattr(screen, "draw"):
             screen.draw()
 
+        if transition and transition.update():
+            transition.draw(pygame.display.get_surface())
+
         pygame.display.flip()
         clock.tick(60)
 
-        if not screen.running:
+        if not screen.running and transition is None:
             next_screen = getattr(screen, "next_screen", None)
 
             if isinstance(screen, ThemeScreen):
@@ -106,35 +125,39 @@ def main():
                         "level": screen.level,
                     }
 
-            if next_screen == "theme":
-                screen = ThemeScreen(pygame.display.get_surface(), sound_manager)
-            elif next_screen == "opening":
-                screen = OpeningScreen(pygame.display.get_surface(), sound_manager)
-                sound_manager.start_music()
-            elif next_screen == "menu":
-                screen = MenuScreen(pygame.display.get_surface(), sound_manager)
-            elif next_screen == "setup":
-                screen = SetupScreen(pygame.display.get_surface(), sound_manager)
-            elif next_screen == "game":
-                screen = GameScreen(
-                    pygame.display.get_surface(), game_config, sound_manager
-                )
-            elif next_screen == "results":
+            if next_screen == "results":
                 stats = existing_stats()
-                summary = get_stats_summary(stats)
+                get_stats_summary(stats)
                 game_result = {
                     "score": screen.score,
                     "total": screen.total,
                     "current_streak": stats["current_streak"],
                     "best_streak": stats["best_streak"],
                 }
-                screen = ResultsScreen(
-                    pygame.display.get_surface(), game_result, sound_manager
-                )
-            elif next_screen == "stats":
-                screen = StatsScreen(pygame.display.get_surface(), sound_manager)
-            elif next_screen == "exit":
-                screen = ExitScreen(pygame.display.get_surface(), sound_manager)
+
+            if next_screen in SCREEN_MAP:
+                if next_screen in SKIP_FADE_SCREENS:
+                    screen = SCREEN_MAP[next_screen](pygame.display.get_surface(), sound_manager)
+                    if next_screen == "opening":
+                        sound_manager.start_music()
+                else:
+                    transition = TransitionFade(12, "out")
+                    while transition and not transition.is_done():
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                running = False
+                        screen.draw()
+                        transition.draw(pygame.display.get_surface())
+                        pygame.display.flip()
+                        clock.tick(60)
+                        transition.update()
+
+                    if not running:
+                        break
+
+                    screen = SCREEN_MAP[next_screen](pygame.display.get_surface(), sound_manager)
+                    transition = TransitionFade(12, "in")
+
             elif next_screen is None:
                 sound_manager.stop_music()
                 running = False
