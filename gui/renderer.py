@@ -420,6 +420,7 @@ OPERATOR_SYMBOLS = {
     "subtraction": "-",
     "multiplication": "×",
     "division": "÷",
+    "primes": "ℙ",
 }
 
 ASSETS_DIR = Path(__file__).parent / "assets"

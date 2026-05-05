@@ -1,8 +1,7 @@
 import pygame
 import random
 import math
-from typing import Optional, Callable, List, Tuple
-from datetime import datetime
+from typing import Optional, List
 
 from renderer import (
     SCREEN_WIDTH,
@@ -25,6 +24,8 @@ from animations import (
     FloatingSymbol,
     ScreenShake,
     FlashEffect,
+    ease_in_out_cubic,
+    ease_out_cubic,
 )
 from stats_manager import (
     existing_stats,
@@ -43,7 +44,7 @@ try:
 except ImportError:
     CHART_AVAILABLE = False
 
-SYMBOLS = ["+", "-", "×", "÷", "=", "?"]
+SYMBOLS = ["+", "-", "×", "÷", "=", "?", "π", "√", "∞", "∑", "ℙ", "Δ"]
 
 DIFFICULTY_LEVELS = {
     1: "Easy",
@@ -61,9 +62,8 @@ OPERATIONS = {
     "2": "subtraction",
     "3": "multiplication",
     "4": "division",
+    "5": "primes",
 }
-
-SYMBOLS = ["+", "-", "×", "÷", "=", "?"]
 
 
 class Screen:
@@ -237,13 +237,14 @@ class OpeningScreen(Screen):
         if self.frame > self.duration - 60:
             self.subtitle_alpha = max(0, self.subtitle_alpha - 5)
 
-        if self.frame % 30 == 0:
+        if self.frame % 25 == 0:
             symbol = random.choice(SYMBOLS)
             x = random.randint(sx(50), SCREEN_WIDTH - sx(50))
             y = -sy(30)
-            speed = random.uniform(sy(0.5), sy(2.0))
+            layer = random.randint(0, 2)
+            speed = random.uniform(sy(0.4), sy(1.2))
             color = random.choice(["fg_dim", "fg_dim", "fg_dim"])
-            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, color))
+            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, color, layer=layer))
 
         self.floating_symbols = [
             s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -263,8 +264,7 @@ class OpeningScreen(Screen):
 
         if self.frame > self.duration - 120:
             t = (self.frame - (self.duration - 120)) / 120
-            # Ease in-out quadratic
-            t = 2 * t * t if t < 0.5 else 1 - pow(-2 * t + 2, 2) / 2
+            t = ease_in_out_cubic(t)
             current_y = start_y + (end_y - start_y) * t
 
         title_font = get_font(72, bold=True)
@@ -297,6 +297,7 @@ class MenuScreen(Screen):
         self.floating_symbols: List[FloatingSymbol] = []
         self.sound_enabled = sound_manager.enabled if sound_manager else False
         self.sound_toggle_changed = False
+        self.menu_timer = 0
 
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
@@ -339,12 +340,15 @@ class MenuScreen(Screen):
             self.running = False
 
     def update(self):
+        self.menu_timer += 1
+
         if random.randint(0, 20) == 0:
             symbol = random.choice(SYMBOLS)
             x = random.randint(50, SCREEN_WIDTH - 50)
             y = random.randint(0, SCREEN_HEIGHT)
-            speed = random.uniform(0.3, 1.0) * random.choice([-1, 1])
-            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim"))
+            layer = random.randint(0, 2)
+            speed = random.uniform(0.2, 0.8) * random.choice([-1, 1])
+            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim", layer=layer))
 
         self.floating_symbols = [
             s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -357,28 +361,47 @@ class MenuScreen(Screen):
             symbol.draw(self.screen, get_font(28))
 
         title_font = get_font(64, bold=True)
+        title_pulse = sy(3) * math.sin(self.menu_timer * 0.03)
         title = title_font.render("πMath", True, COLORS["fg"])
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(120)))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, sy(120) + title_pulse))
         self.screen.blit(title, title_rect)
 
         for i, option in enumerate(self.options):
             y = sy(250) + i * sy(70)
-            color = "fg" if i == self.selected_index else "fg_dim"
-            prefix = "▶ " if i == self.selected_index else "  "
-            
+            is_selected = i == self.selected_index
+            color = "fg" if is_selected else "fg_dim"
+
+            if is_selected:
+                pulse = sy(4) * math.sin(self.menu_timer * 0.08)
+                y += pulse
+                prefix = "▶ "
+            else:
+                prefix = "  "
+
             display_text = prefix + option
             if option == "Sound":
                 display_text = prefix + f"Sound: {'ON' if self.sound_enabled else 'OFF'}"
-            
+
+            size = 36 if is_selected else 32
+            bg_size = sx(280)
+            bg_h = sy(50)
+
+            if is_selected:
+                bg_alpha = int(60 + 30 * math.sin(self.menu_timer * 0.1))
+                bg_surf = pygame.Surface((bg_size, bg_h), pygame.SRCALPHA)
+                bg_color_t = (*COLORS["fg_dim"][:3], bg_alpha)
+                pygame.draw.rect(bg_surf, bg_color_t, (0, 0, bg_size, bg_h), border_radius=10)
+                self.screen.blit(bg_surf, (SCREEN_WIDTH // 2 - bg_size // 2, y - bg_h // 2))
+
             draw_text(
                 self.screen,
                 display_text,
                 SCREEN_WIDTH // 2,
                 y,
                 color,
-                32,
+                size,
                 center=True,
-                bold=(i == self.selected_index),
+                bold=is_selected,
             )
 
         draw_text(
@@ -414,7 +437,8 @@ class SetupScreen(Screen):
             if self.state == "questions":
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     if self.input_text.isdigit() and int(self.input_text) > 0:
-                        self.questions = int(self.input_text)
+                        value = int(self.input_text)
+                        self.questions = min(value, 999)
                         if self.sound:
                             self.sound.play_sound("select")
                         self.state = "mode"
@@ -442,17 +466,17 @@ class SetupScreen(Screen):
 
             elif self.state == "operation":
                 if event.key == pygame.K_UP or event.key == pygame.K_w:
-                    self.selected_index = (self.selected_index - 1) % 4
+                    self.selected_index = (self.selected_index - 1) % 5
                     if self.sound:
                         self.sound.play_sound("select")
                 elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                    self.selected_index = (self.selected_index + 1) % 4
+                    self.selected_index = (self.selected_index + 1) % 5
                     if self.sound:
                         self.sound.play_sound("select")
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     if self.sound:
                         self.sound.play_sound("select")
-                    ops = ["addition", "subtraction", "multiplication", "division"]
+                    ops = ["addition", "subtraction", "multiplication", "division", "primes"]
                     self.operation = ops[self.selected_index]
                     self.state = "level"
                     self.selected_index = 0
@@ -550,6 +574,7 @@ class SetupScreen(Screen):
                 "Subtraction (-)",
                 "Multiplication (×)",
                 "Division (÷)",
+                "Primes (ℙ)",
             ]
             for i, op in enumerate(ops):
                 color = "fg" if i == self.selected_index else "fg_dim"
@@ -631,6 +656,16 @@ class GameScreen(Screen):
 
     def generate_problem(self) -> dict:
         from utilities.game_logic import generate_integer
+        from utilities.primes import is_prime
+
+        if self.operation == "primes":
+            num = generate_integer(self.level)
+            correct = is_prime(num)
+            return {
+                "number": num,
+                "answer": correct,
+                "display": f"Is {num} a prime number?",
+            }
 
         x, y = generate_integer(self.level), generate_integer(self.level)
 
@@ -667,23 +702,23 @@ class GameScreen(Screen):
                     "display": f"[x] × {y} = {x * y}.\nx = ?",
                 }
 
-            # need to work on the division logic here
         elif self.operation == "division":
             factor = generate_integer(max(1, self.level - 1))
-            dividend = y * factor
+            divisor = max(1, y)
+            dividend = divisor * factor
             if self.mode == "solve_mode":
                 return {
                     "x": dividend,
-                    "y": y,
+                    "y": divisor,
                     "answer": factor,
-                    "display": f"{dividend} ÷ {y} = ?",
+                    "display": f"{dividend} ÷ {divisor} = ?",
                 }
             else:
                 return {
                     "x": dividend,
-                    "y": y,
+                    "y": divisor,
                     "answer": factor,
-                    "display": f"[x] ÷ {y} = {factor}.\nx = ?",
+                    "display": f"[x] ÷ {divisor} = {factor}.\nx = ?",
                 }
 
         return {"x": x, "y": y, "answer": x + y, "display": f"{x} + {y} = ?"}
@@ -701,6 +736,15 @@ class GameScreen(Screen):
                     self.next_question()
                 return
 
+            if self.operation == "primes":
+                if event.key == pygame.K_y:
+                    self.input_text = "y"
+                    self.check_answer()
+                elif event.key == pygame.K_n:
+                    self.input_text = "n"
+                    self.check_answer()
+                return
+
             if event.key == pygame.K_BACKSPACE:
                 self.input_text = self.input_text[:-1]
             elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
@@ -712,6 +756,30 @@ class GameScreen(Screen):
 
     def check_answer(self):
         if not self.input_text:
+            return
+
+        if self.operation == "primes":
+            user_yes = self.input_text == "y"
+            correct = self.problem["answer"]
+            if user_yes == correct:
+                self.score += 1
+                self.particles.emit_burst(
+                    SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + sy(50), 30
+                )
+                if self.sound:
+                    self.sound.play_sound("correct")
+                self.feedback = "correct"
+            else:
+                self.tries += 1
+                self.shake = ScreenShake(8, 15)
+                self.flash = FlashEffect("red", 15)
+                if self.sound:
+                    self.sound.play_sound("wrong")
+                self.feedback = "wrong"
+                self.correct_answer = "Yes" if correct else "No"
+
+            self.show_answer = True
+            self.feedback_timer = 60
             return
 
         try:
@@ -844,7 +912,7 @@ class GameScreen(Screen):
             sy(60),
             "bg_dark",
             "fg_dim",
-            3,  # Updated to match new default
+            3,
         )
 
         if self.show_answer:
@@ -880,28 +948,39 @@ class GameScreen(Screen):
                     center=True,
                 )
         else:
-            draw_text(
-                self.screen,
-                self.input_text + "_",
-                SCREEN_WIDTH // 2,
-                input_bg_y + sy(30),
-                "aqua",
-                36,
-                center=True,
-                bold=True,
-            )
-
-            # Show "Try again" or "Tries" indicator
-            if self.tries > 0:
+            if self.operation == "primes":
                 draw_text(
                     self.screen,
-                    f"Try again! ({self.tries}/3)",
+                    "Press Y for Yes, N for No",
                     SCREEN_WIDTH // 2,
-                    input_bg_y + sy(75),
-                    "orange",
-                    16,
+                    input_bg_y + sy(30),
+                    "aqua",
+                    28,
                     center=True,
+                    bold=True,
                 )
+            else:
+                draw_text(
+                    self.screen,
+                    self.input_text + "_",
+                    SCREEN_WIDTH // 2,
+                    input_bg_y + sy(30),
+                    "aqua",
+                    36,
+                    center=True,
+                    bold=True,
+                )
+
+                if self.tries > 0:
+                    draw_text(
+                        self.screen,
+                        f"Try again! ({self.tries}/3)",
+                        SCREEN_WIDTH // 2,
+                        input_bg_y + sy(75),
+                        "orange",
+                        16,
+                        center=True,
+                    )
 
         draw_text(
             self.screen,
@@ -936,7 +1015,7 @@ class ResultsScreen(Screen):
         super().__init__(screen, sound_manager)
         self.score = game_result["score"]
         self.total = game_result["total"]
-        self.percentage = (self.score / self.total) * 100 if self.total > 0 else 0
+        self.percentage = round((self.score / self.total) * 100, 1) if self.total > 0 else 0
         self.is_perfect = self.percentage == 100
         self.current_streak = game_result.get("current_streak", 0)
         self.best_streak = game_result.get("best_streak", 0)
@@ -983,7 +1062,6 @@ class ResultsScreen(Screen):
             if random.randint(0, 3) == 0:
                 self.particles.emit_confetti(random.randint(0, SCREEN_WIDTH), -20, 5)
             self.particles.update()
-            self.particles.draw(self.screen)
 
     def draw(self):
         self.screen.fill(COLORS["bg"])
@@ -1071,6 +1149,8 @@ class StatsScreen(Screen):
         self.stats = existing_stats()
         self.summary = get_stats_summary(self.stats)
         self.chart_data = get_chart_data(self.stats, self.period)
+        self.timer = 0
+        self.period_transition = 0
 
     def handle_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN:
@@ -1085,6 +1165,7 @@ class StatsScreen(Screen):
                 )
                 if self.sound:
                     self.sound.play_sound("select")
+                self.period_transition = 20
                 self.update_period()
             elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 self.selected_period_index = (self.selected_period_index + 1) % len(
@@ -1092,6 +1173,7 @@ class StatsScreen(Screen):
                 )
                 if self.sound:
                     self.sound.play_sound("select")
+                self.period_transition = 20
                 self.update_period()
 
     def update_period(self):
@@ -1099,6 +1181,9 @@ class StatsScreen(Screen):
         self.chart_data = get_chart_data(self.stats, self.period)
 
     def update(self):
+        self.timer += 1
+        if self.period_transition > 0:
+            self.period_transition -= 1
         self.stats = existing_stats()
         self.summary = get_stats_summary(self.stats)
         self.chart_data = get_chart_data(self.stats, self.period)
@@ -1106,78 +1191,86 @@ class StatsScreen(Screen):
     def draw(self):
         self.screen.fill(COLORS["bg"])
 
+        alpha = max(100, 255 - self.period_transition * 12)
+
+        title_pulse = sy(2) * math.sin(self.timer * 0.04)
         draw_text(
             self.screen,
             "Statistics",
             SCREEN_WIDTH // 2,
-            30,
+            sy(35) + title_pulse,
             "fg",
             32,
             center=True,
             bold=True,
         )
 
+        tab_width = sx(140)
+        tab_height = sy(36)
+        tab_y = sy(68)
+        tab_spacing = sx(155)
+        tab_start_x = SCREEN_WIDTH // 2 - (len(self.period_options) - 1) * tab_spacing // 2
+
         for i, period in enumerate(self.period_options):
-            x = sx(200) + i * sx(150)
-            color = "fg" if i == self.selected_period_index else "fg_dim"
+            x = tab_start_x + i * tab_spacing
+            is_selected = i == self.selected_period_index
+            color = "fg" if is_selected else "fg_dim"
+
+            bg_surf = pygame.Surface((tab_width, tab_height), pygame.SRCALPHA)
+            if is_selected:
+                bg_color_t = (*COLORS["fg"][:3], 35)
+            else:
+                bg_color_t = (*COLORS["fg"][:3], 15)
+            pygame.draw.rect(bg_surf, bg_color_t, (0, 0, tab_width, tab_height), border_radius=8)
+            self.screen.blit(bg_surf, (x - tab_width // 2, tab_y - tab_height // 2))
+
             draw_text(
                 self.screen,
                 self.period_labels[period],
                 x,
-                sy(75),
+                tab_y,
                 color,
-                18,
+                20,
                 center=True,
-                bold=(i == self.selected_period_index),
+                bold=is_selected,
             )
 
         y_offset = sy(120)
+        card_w = sx(260)
+        card_h = sy(42)
+        card_gap = sy(12)
+        card_x = sx(70)
 
-        draw_text(
-            self.screen,
-            f"Games Played: {self.summary['games_played']}",
-            sx(80),
-            y_offset,
-            "fg",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Total Questions: {self.summary['total_questions']}",
-            sx(80),
-            y_offset + sy(30),
-            "fg",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Accuracy: {self.summary['overall_accuracy']:.1f}%",
-            sx(80),
-            y_offset + sy(60),
-            "aqua",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Best Score: {self.summary['best_score_percent']:.1f}%",
-            sx(80),
-            y_offset + sy(90),
-            "yellow",
-            20,
-        )
-        draw_text(
-            self.screen,
-            f"Best Streak: {self.summary['best_streak']}",
-            sx(80),
-            y_offset + sy(120),
-            "orange",
-            20,
-        )
+        stat_items = [
+            ("Games Played", str(self.summary["games_played"]), "fg"),
+            ("Total Questions", str(self.summary["total_questions"]), "fg"),
+            ("Accuracy", f"{self.summary['overall_accuracy']:.1f}%", "aqua"),
+            ("Best Score", f"{self.summary['best_score_percent']:.1f}%", "yellow"),
+            ("Best Streak", str(self.summary["best_streak"]), "orange"),
+        ]
+
+        for idx, (label, value, val_color) in enumerate(stat_items):
+            y = y_offset + idx * (card_h + card_gap)
+
+            card_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
+            card_bg = (*COLORS["bg_dark"][:3], 120)
+            pygame.draw.rect(card_surf, card_bg, (0, 0, card_w, card_h), border_radius=10)
+            border_color_t = (*COLORS["fg_dim"][:3], 60)
+            pygame.draw.rect(card_surf, border_color_t, (0, 0, card_w, card_h), 1, border_radius=10)
+            self.screen.blit(card_surf, (card_x, y))
+
+            draw_text(self.screen, label, card_x + sx(15), y + card_h // 2, "fg_dim", 16, center=False)
+
+            val_font = get_font(20, bold=True)
+            val_surf = val_font.render(value, True, COLORS[val_color])
+            val_surf.set_alpha(alpha)
+            val_rect = val_surf.get_rect(center=(card_x + card_w - sx(50), y + card_h // 2))
+            self.screen.blit(val_surf, val_rect)
+
+        chart_x, chart_y = sx(370), sy(120)
+        chart_w, chart_h = sx(400), sy(180)
 
         if CHART_AVAILABLE and self.chart_data["sessions"]:
-            chart_x, chart_y = sx(380), sy(120)
-            chart_w, chart_h = sx(380), sy(200)
-
             draw_box(
                 self.screen, chart_x, chart_y, chart_w, chart_h, "bg_dark", "fg_dim", 1
             )
@@ -1204,11 +1297,9 @@ class StatsScreen(Screen):
                         self.chart_data["accuracy"],
                         color=COLORS["aqua"],
                     )
-                
-                # Ensure y-range > 0 to avoid crash if all values are identical
+
                 fig.set_ylim((0, 100))
 
-                # Ensure x-range > 0 to avoid crash if there is only one data point
                 if len(self.chart_data["sessions"]) == 1:
                     fig.set_xlim((0, 2))
 
@@ -1217,7 +1308,6 @@ class StatsScreen(Screen):
                 fig.add_yaxis_label("%")
                 fig.add_gridlines()
                 fig.draw()
-                # Hack: Library blits background too early (before elements are drawn on it)
                 self.screen.blit(fig.background, (chart_x, chart_y))
             except Exception as e:
                 print(f"Chart Error: {e}")
@@ -1242,8 +1332,8 @@ class StatsScreen(Screen):
             )
 
         if CHART_AVAILABLE and self.chart_data["sessions"]:
-            bar_x, bar_y = sx(80), sy(350)
-            bar_w, bar_h = sx(300), sy(150)
+            bar_x, bar_y = sx(70), sy(350)
+            bar_w, bar_h = sx(350), sy(150)
             draw_box(self.screen, bar_x, bar_y, bar_w, bar_h, "bg_dark", "fg_dim", 1)
 
             try:
@@ -1263,25 +1353,22 @@ class StatsScreen(Screen):
                     color=COLORS["blue"],
                 )
 
-                # Ensure y-range > 0 to avoid crash if all values are identical
                 max_q = max(self.chart_data["questions"]) if self.chart_data["questions"] else 0
                 fig2.set_ylim((0, max(1, max_q + 1)))
 
-                # Ensure x-range > 0 to avoid crash if there is only one data point
                 if len(self.chart_data["sessions"]) == 1:
                     fig2.set_xlim((0, 2))
 
                 fig2.add_title("Questions per Session")
                 fig2.add_gridlines()
                 fig2.draw()
-                # Hack: Library blits background too early
                 self.screen.blit(fig2.background, (bar_x, bar_y))
             except:
                 pass
 
         draw_text(
             self.screen,
-            "← → to change period | ESC to go back | F for Fullscreen | Q to Quit",
+            "\u2190 \u2192 to change period | ESC to go back | F for Fullscreen | Q to Quit",
             SCREEN_WIDTH // 2,
             SCREEN_HEIGHT - sy(40),
             "fg_dim",
@@ -1294,26 +1381,28 @@ class ExitScreen(Screen):
     def __init__(self, screen: pygame.Surface, sound_manager=None):
         super().__init__(screen, sound_manager)
         self.frame = 0
-        self.duration = 120
+        self.duration = 150
         self.floating_symbols: List[FloatingSymbol] = []
         self.alpha = 255
 
     def update(self):
         self.frame += 1
 
-        if random.randint(0, 10) == 0:
+        if random.randint(0, 12) == 0:
             symbol = random.choice(SYMBOLS)
             x = random.randint(sx(50), SCREEN_WIDTH - sx(50))
             y = SCREEN_HEIGHT + sy(30)
-            speed = random.uniform(-sy(2), -sy(0.5))
-            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim"))
+            layer = random.randint(0, 2)
+            speed = random.uniform(-sy(1.5), -sy(0.3))
+            self.floating_symbols.append(FloatingSymbol(symbol, x, y, speed, "fg_dim", layer=layer))
 
         self.floating_symbols = [
             s for s in self.floating_symbols if s.update(SCREEN_WIDTH, SCREEN_HEIGHT)
         ]
 
-        if self.frame > self.duration - 30:
-            self.alpha = max(0, self.alpha - 10)
+        if self.frame > self.duration - 45:
+            t = (self.frame - (self.duration - 45)) / 45
+            self.alpha = int(255 * (1 - ease_out_cubic(t)))
 
         if self.frame >= self.duration:
             self.running = False
